@@ -1,0 +1,16 @@
+method: SFKEEM
+length_type: Bohr_radius
+<<global>>
+sigma 0.7249
+<<key>>
+atom
+<<value_symbol>>
+alfa
+beta
+<<value>>
+N   12.5651   6.5931   
+O   26.8775   20.3319   
+C   6.5928   3.5378   
+H   2.501   13.3735   
+S   4.3937   2.8163   
+<<end>>

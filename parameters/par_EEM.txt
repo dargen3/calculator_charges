@@ -1,0 +1,16 @@
+method: EEM
+length_type: Angstrom
+<<global>>
+kappa 0.2509
+<<key>>
+atom
+<<value_symbol>>
+alfa
+beta
+<<value>>
+C		2.4992 0.3220
+H		2.3864 0.6581
+N		2.5891 0.4072
+O		2.6342 0.4041
+S		2.4506 0.2404
+<<end>>
