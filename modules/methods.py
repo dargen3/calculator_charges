@@ -132,6 +132,7 @@ class arciclass:
 
 
 class EEM(arciclass):
+
     def calculate(self, molecule):
         num_of_atoms = molecule.number_of_atoms
         matrix = np.empty(shape=[num_of_atoms + 1, num_of_atoms + 1], dtype=float)
