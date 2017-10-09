@@ -1,0 +1,46 @@
+method: EEM
+length_type: Angstrom
+<<global>>
+kappa 0.2213
+<<key>>
+atom
+<<value_symbol>>
+alfa
+beta
+<<value>>
+C   2.4306   0.2764   
+H   2.3247   0.6636   
+N   2.5187   0.3118   
+O   2.7954   0.68   
+S   2.3999   0.2087   
+<<end>>
+
+
+
+
+Parameterized set of molecules: structures/set01.sdf
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson
+---------  ---------------  -------------------  ---------
+0.0672008         0.573086            0.0496118    0.98396
+Number of all atoms is: 16168
+
+
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson
+---------  ---------------  -------------------  ---------
+0.0661037         0.182399            0.0505096   0.984149
+Number of all molecules is: 500
+
+
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson
+-------------  ---------  ---------------  -------------------  ---------
+H              0.0382688         0.169637            0.0303081   0.865018
+C              0.0759211         0.465218            0.061309    0.978648
+S              0.214942          0.536639            0.163055    0.962075
+O              0.0832889         0.235984            0.0697215   0.746962
+N              0.106152          0.573086            0.0807862   0.949751

@@ -4,9 +4,9 @@ from sys import stdin
 
 
 def writing_to_list(molecule, results):
-    num_of_atoms = molecule.number_of_atoms
+    num_of_atoms = molecule._number_of_atoms
     list_with_molecule_data = []
-    list_with_molecule_data.append(molecule.name)
+    list_with_molecule_data.append(molecule._name)
     list_with_molecule_data.append(str(num_of_atoms))
     for i in range(num_of_atoms):
         result = results[i]

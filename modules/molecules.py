@@ -1,63 +1,120 @@
-#/usr/bin/env pypy
-from math import sqrt
+from numpy import sqrt, empty, zeros, array
 from atoms import Atom
-from bonds import Bond
+from numba import jit
+from sys import exit
+from scipy import spatial
+
+@jit(nopython=True)
+def bonded_atoms(index, set):
+    bonded_atoms = []
+    for bond in set:
+        if bond[0] == index:
+            bonded_atoms.append(bond[1])
+        elif bond[1] == index:
+            bonded_atoms.append(bond[0])
+    return bonded_atoms
+
+
+@jit(nopython=True)
+def distance(x1, y1, z1, x2, y2, z2):
+    return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
+
+
+@jit(nopython=True)
+def bond_type(index1, index2, bonds):
+    if index2 < index1:
+        index1, index2 = index2, index1
+    for x, bond in enumerate(bonds):
+        if bond[0] == index1 and bond[1] == index2:
+            return x
+
 
 class Molecule:
     def __init__(self, molecule):
-        self.name = molecule[0]
-        self.number_of_atoms = len(molecule[1]["atoms"])
+        self._name = molecule[0]
+        self._number_of_atoms = len(molecule[1]["atoms"])
         atoms = []
+        atoms_types = []
         for atom in molecule[1]["atoms"]:
             atoms.append(Atom(atom))
+            atoms_types.append(atom[0])
+        self._atoms_types = atoms_types
         self.atoms = atoms
         bonds = []
+        bonds_types = []
         for bond in molecule[1]["bonds"]:
-            bonds.append(Bond(bond))
+            bonds.append((bond[0], bond[1]))
+            bonds_types.append(bond[2])
         self.bonds = bonds
-        self.total_charge = molecule[1]["total_charge"]
-        list_with_bonded_atoms = []
-        for bond in self.bonds:
-            list_with_bonded_atoms.append(tuple(bond.bonded_atoms))
-        self.set_with_bonded_atoms = set(list_with_bonded_atoms)
+        self.bonds_types = bonds_types
+        self._total_charge = molecule[1]["total_charge"]
+        list_of_atoms = [[] for _ in range(self._number_of_atoms+1)]
+        list_of_all_bonds = [[] for _ in range(self._number_of_atoms+1)]
+        for x, bond in enumerate(self.bonds):
+            atom1 = bond[0]
+            atom2 = bond[1]
+            list_of_atoms[atom1].append(atom2)
+            list_of_atoms[atom2].append(atom1)
+            list_of_all_bonds[atom1].append(self.bonds_types[x])
+            list_of_all_bonds[atom2].append(self.bonds_types[x])
+        list_of_highest_bond = []
+        for x in list_of_all_bonds[1:]:
+            list_of_highest_bond.append(max(x))
+        list_of_highest_bond.insert(0,0)
+        self._highest_bond_of_atoms = list_of_highest_bond
+        self._bonded_atoms = list_of_atoms
+        atom_coords = array([atom.position for atom in self.atoms])
+        self._distance_matrix = spatial.distance.cdist(atom_coords, atom_coords)
 
 
     @property
-    def name(self):
-        return self.name
+    def _highest_bond_of_atoms(self):
+        return self._highest_bond_of_atoms
 
     @property
-    def number_of_atoms(self):
-        return self.number_of_atoms
+    def _name(self):
+        return self._name
 
+    @property
+    def _number_of_atoms(self):
+        return self._number_of_atoms
+
+    @property
+    def _matrix_of_distance(self):
+        return self._distance_matrix
+
+    @property
+    def _atoms_types(self):
+        return self._atoms_types
+
+    @property
+    def _formal_charge(self):
+        return self._total_charge
+
+    @property
+    def _bonded_atoms(self):
+        return self._bonded_atoms
+
+    def set_length_correction(self, correction):
+        if correction == 1:
+            pass
+        else:
+            self._matrix_of_distance = self._matrix_of_distance * correction
 
     def get_atom_type_with_idx(self, index):
-        if index > self.number_of_atoms:
-            print("Index is higher than number of atoms.")
-            return False
         return self.atoms[index - 1].symbol
 
-    @property
-    def formal_charge(self):
-        return self.total_charge
-
-
     def get_distance_between_atoms(self, index1, index2):
-        if index1 > self.number_of_atoms:
-            print("Index of atom 1 is higher than number of atoms.")
-            return False
-        if index2 > self. number_of_atoms:
-            print("Index of atom 2 is higher than number of atoms")
-            return False
         x1, y1, z1 = self.atoms[index1 - 1].position
         x2, y2, z2 = self.atoms[index2 - 1].position
-        distance = sqrt((x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2)
-        return distance
+        return distance(x1, y1, z1, x2, y2, z2)
 
     def get_bond_type_between_atoms(self, index1, index2):
-        if index2 < index1:
-            index1, index2 = index2, index1
-        if (index1, index2) in self.set_with_bonded_atoms:
-            for bond in self.bonds:
-                if bond.bonded_atoms == [index1, index2]:
-                    return bond.bond_type
+        try:
+            return self.bonds_types[bond_type(index1, index2, self.bonds)]
+        except TypeError:
+            pass
+
+    def get_bonded_atoms(self, index):
+        return bonded_atoms(index, self.bonds)
+

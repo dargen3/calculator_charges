@@ -1,6 +1,7 @@
 method: QEq
-length_type: Angstrom
+length_type: Angstrom 
 <<global>>
+cor 12.3
 <<key>>
 atom
 <<value_symbol>>

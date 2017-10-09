@@ -1,0 +1,20 @@
+method: QEq
+length_type: Angstrom 
+<<global>>
+cor 12.3
+<<key>>
+atom
+<<value_symbol>>
+electronegativity
+hardness
+radius
+<<value>>
+H 	4.528 	13.8904  0.8271
+C 	5.343 	10.1260  1.1346
+N 	6.899 	11.7600  0.9770
+O 	8.741 	13.3640  0.8597
+F 	10.874 	14.9480  0.7686
+P 	5.463 	 8.0000  1.4362
+S 	6.928 	 8.9720  1.2806
+Cl 	8.564 	 9.8920  1.1615
+<<end>>

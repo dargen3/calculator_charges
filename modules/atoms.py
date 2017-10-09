@@ -1,4 +1,3 @@
-#/usr/bin/env pypy
 class Atom:
     def __init__(self, atom):
         self.symbol = atom[0]

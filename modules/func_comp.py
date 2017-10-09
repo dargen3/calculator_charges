@@ -2,6 +2,7 @@ from numpy import sqrt
 from scipy import stats
 from matplotlib import pyplot as plt
 import os.path
+from termcolor import colored
 
 
 def making_dictionary_with_charges(file_with_charges):
@@ -62,6 +63,7 @@ def making_final_list(dict_with_charges1, dict_with_charges2):
     set_of_atoms = set(list_of_atoms)
     return final_list, final_dict_with_mol, tuple(set_of_atoms)
 
+
 def statistics_for_atom_type(atomic_symbol, list_with_data, atoms):
     list_with_charges1 = []
     list_with_charges2 = []
@@ -76,7 +78,7 @@ def statistics_for_atom_type(atomic_symbol, list_with_data, atoms):
         RMSD = sqrt((1.0/len(list_for_RMSD))*sum(list_for_RMSD))
         list_for_deviation = []
         for atom in list_with_atomic_data:
-            list_for_deviation.append((atom[1]-atom[2]))
+            list_for_deviation.append(abs(atom[1]-atom[2]))
         max_deviation = max(list_for_deviation)
         average_deviation = sum(list_for_deviation)/len(list_for_deviation)
         list_with_charges1 = []
@@ -89,7 +91,7 @@ def statistics_for_atom_type(atomic_symbol, list_with_data, atoms):
         RMSD, max_deviation, average_deviation, person = "-", "-", "-", "-"
     colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", "#C0C0C0", "#800000", "#008000", "#800080", "#008080", "#000080"] * 10
     plt.scatter(list_with_charges1, list_with_charges2, marker="o", color=colors[atoms.index(atomic_symbol)], label=atomic_symbol)
-    return [atomic_symbol, RMSD, max_deviation, average_deviation, person]
+    return [atomic_symbol, RMSD, max_deviation, average_deviation, person, len(list_with_atomic_data)]
 
 
 def statistics_for_all_atoms(list_with_data):
@@ -99,7 +101,7 @@ def statistics_for_all_atoms(list_with_data):
     RMSD = sqrt((1.0 / len(list_for_RMSD)) * sum(list_for_RMSD))
     list_for_deviation = []
     for atom in list_with_data:
-        list_for_deviation.append((atom[1] - atom[2]))
+        list_for_deviation.append(abs(atom[1] - atom[2]))
     max_deviation = max(list_for_deviation)
     average_deviation = sum(list_for_deviation) / len(list_for_deviation)
     list_with_charges1 = []
@@ -108,7 +110,7 @@ def statistics_for_all_atoms(list_with_data):
         list_with_charges1.append(atom[1])
         list_with_charges2.append(atom[2])
     person = stats.pearsonr(list_with_charges1, list_with_charges2)[0]
-    return [[RMSD, max_deviation, average_deviation, person]], len(list_with_data)
+    return [[RMSD, max_deviation, average_deviation, person, len(list_with_data)]], len(list_with_data)
 
 
 def average(list):
@@ -126,12 +128,12 @@ def statistics_for_molecules(dictionary):
         list_with_max_deviation.append(data[0][1])
         list_with_average_deviation.append(data[0][2])
         list_with_pearson.append(data[0][3])
-    return [[average(list_with_RMSD), average(list_with_max_deviation), average(list_with_average_deviation), average(list_with_pearson)]], len(dictionary)
+    return [[average(list_with_RMSD), average(list_with_max_deviation), average(list_with_average_deviation), average(list_with_pearson), len(dictionary)]]
 
 
 def plotting(charges1, charges2, save_fig):
-    plt.xlabel(charges1)
-    plt.ylabel(charges2)
+    plt.xlabel(charges2)
+    plt.ylabel(charges1)
     plt.title("Correlation graph")
     plt.xlim([-2, 3])
     plt.ylim([-2, 3])
@@ -160,3 +162,4 @@ def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig):
             else:
                 print("\n\n")
                 exit(1)
+

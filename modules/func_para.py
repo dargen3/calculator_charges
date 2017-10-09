@@ -18,8 +18,7 @@ def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameter
         print("If you want to replace exist file, please write yes and press enter. Else press enter.")
         decision = stdin.readline().rstrip('\n')
         if decision == "yes":
-            os.remove(new_parameters)
-            print(colored("Exist file was removed.\n\n\n", "green"))
+            print(colored("Exist file will be replaced.\n\n\n", "green"))
         else:
             exit("\n")
 
@@ -27,7 +26,7 @@ def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameter
 def control_of_missing_atoms(set_of_molecule, method, parameters):
     list_of_atoms = []
     for molecule in set_of_molecule:
-        num_of_atoms = molecule.number_of_atoms
+        num_of_atoms = molecule._number_of_atoms
         for i in range(num_of_atoms):
             symbol = molecule.get_atom_type_with_idx(i)
             if symbol not in list_of_atoms:
@@ -44,6 +43,7 @@ def control_of_missing_atoms(set_of_molecule, method, parameters):
             method.load_parameters(parameters)
         else:
             exit("\n")
+    return list(set(list_of_atoms))
 
 
 def writing_new_parameters(parameters, new_parameters_file, res, method):
@@ -59,7 +59,7 @@ def writing_new_parameters(parameters, new_parameters_file, res, method):
             while actual_line.split()[0] != "<<key>>":
                 new_parameters.write(str(actual_line.split()[0]) + " "),
                 new_parameters.write(str(float(
-                    "{0:.4f}".format(res.x[method.sorted_parameters_keys.index(actual_line.split()[0])]))) + "\n")
+                    "{0:.4f}".format(res[method.sorted_parameters_keys.index(actual_line.split()[0])]))) + "\n")
                 actual_line = parameters.readline()
             new_parameters.write(actual_line)
             key_list = []
@@ -84,9 +84,9 @@ def writing_new_parameters(parameters, new_parameters_file, res, method):
                     key_of_sorted_parameters = key_of_sorted_parameters + "~" + actual_line.split()[x]
                 for x in range(len(key_list), len(key_list) + len(value_symbols_list)):
                     key = key_of_sorted_parameters[1:] + "~" + value_symbols_list[x - len(key_list)]
-                    new_parameters.write(
-                        str(float("{0:.4f}".format(res.x[method.sorted_parameters_keys.index(key)]))) + "   "),
+                    new_parameters.write(str(float("{0:.4f}".format(res[method.sorted_parameters_keys.index(key)]))) + "   "),
                 actual_line = parameters.readline()
                 new_parameters.write("\n")
-            new_parameters.write("<<end>>")
+            new_parameters.write("<<end>>\n\n")
     rename(random_filename.name, new_parameters_file)
+
