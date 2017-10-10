@@ -1,0 +1,46 @@
+method: SAEFM
+length_type: Angstrom
+<<global>>
+<<key>>
+atom
+<<value_symbol>>
+C
+H
+O
+N
+S
+1
+2
+3
+<<value>>
+C   0.2115   -0.3888   1.5745   0.8658   -0.0074   1.2781   0.6068   0.0   
+H   -0.042   -0.1368   0.2153   0.1285   -0.1634   -0.1368   0.0   0.0   
+O   -0.3435   -0.7256   0.144   -0.0556   -0.6897   0.2717   0.1128   0.0   
+N   0.4794   -0.0709   1.3914   0.9817   -0.3693   1.8176   0.9812   -0.043   
+S   1.3036   0.729   2.3259   2.1647   0.8579   1.248   0.7772   0.0   
+<<end>>
+
+
+
+
+Parameterized set of molecules: 8144.sdf
+Method of parameterization: minimize
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson    num. of atoms
+---------  ---------------  -------------------  ---------  ---------------
+0.0396829         0.298222            0.0272442   0.994583           361963
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson    num. of molecules
+---------  ---------------  -------------------  ---------  -------------------
+0.0395227         0.118278            0.0282329    0.99434                 8144
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson    num. of atoms
+-------------  ---------  ---------------  -------------------  ---------  ---------------
+H              0.0178792         0.136014            0.0134049   0.973622           176067
+C              0.0553132         0.298222            0.0427957   0.988021           135697
+O              0.0375789         0.248011            0.0286769   0.922638            30270
+N              0.0529113         0.287331            0.0414438   0.971175            19929
+

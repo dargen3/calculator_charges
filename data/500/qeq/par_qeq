@@ -1,0 +1,50 @@
+method: QEq
+length_type: Angstrom 
+<<global>>
+cor 11.3464
+<<key>>
+atom
+<<value_symbol>>
+electronegativity
+hardness
+radius
+<<value>>
+H   3.625   14.5919   0.9538   
+C   5.5799   9.5154   0.9522   
+N   7.1702   9.729   0.9487   
+O   11.4264   15.2114   0.9573   
+F   10.874   14.948   0.7686   
+P   5.463   8.0   1.4362   
+S   4.6374   8.7963   0.9653   
+Cl   8.564   9.892   1.1615   
+<<end>>
+
+
+
+
+Parameterized set of molecules: structures/set01.sdf
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson
+---------  ---------------  -------------------  ---------
+0.0565253         0.536114            0.0415398   0.988678
+Number of all atoms is: 16168
+
+
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson
+---------  ---------------  -------------------  ---------
+0.0550223         0.151979            0.0418032   0.988518
+Number of all molecules is: 500
+
+
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson
+-------------  ---------  ---------------  -------------------  ---------
+H              0.0346242         0.170998            0.027214    0.885619
+C              0.0652305         0.366599            0.051321    0.983968
+S              0.187735          0.484399            0.13976     0.972574
+O              0.0674178         0.195676            0.0550562   0.81406
+N              0.074518          0.536114            0.0569446   0.974876

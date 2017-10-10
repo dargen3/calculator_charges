@@ -33,7 +33,6 @@ def settings_argparse():
     parser.add_argument("--charges", help="File with charges for comparison.")
     parser.add_argument("--num_of_parameterized_mol", help="Only first N molecule will be parameterized.")
     parser.add_argument("--save_fig", help="Save figure of comparison.")
-    parser.add_argument("--save_setm", help="Not for using. Its for intern usage of script.", action="store_true")
     parser.add_argument("--atom_types_for_para", help="Only for SAEFM!", nargs="+")
     parser.add_argument("--method_parameterization", help="It can be choosen minimize, basinhopping or diferential_evolution.", choices=("minimize", "basinhopping", "diferential_evolution"))
     parser.add_argument("--comparison_after_par", action="store_true", help="Comparison after parameterization.")
@@ -91,10 +90,16 @@ def calculating_charges(list_of_parameters):
         deviation_list = zip(list_with_results, method._right_charges_for_parametrization)
     else:
         deviation_list = zip(list_with_results, method.right_charges_for_parameterization_by_atom_types(method._get_parameterized_atom_type))
+
     rmsd_list, abs_dev = statistics(deviation_list)
     rmsd = sqrt((1.0 / len(rmsd_list)) * sum(rmsd_list))
     stdout.write("Actual RMSD: " + str(rmsd) + "     Actual max deviation: " + str(abs_dev) + "\r")
-    return rmsd
+    return rmsd+abs_dev/10.0
+
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -133,12 +138,12 @@ if __name__ == "__main__":
         method.set_parameters_type()
         method.set_getting_parameters("calculation")
         num_of_err = 0
-        if args.method[0:2] == "SA":
+        if args.method == "SAEFM":
             atomic_types = para.control_of_missing_atoms(set_of_molecule, method, args.parameters)
         for molecule in set_of_molecule:
             molecule.set_length_correction(method._length_correction)
             try:
-                if args.method[0:2] == "SA":
+                if args.method == "SAEFM":
                     results = method.calculate(molecule, atomic_types)
                 else:
                     results = method.calculate(molecule)
@@ -155,13 +160,13 @@ if __name__ == "__main__":
             print(colored("\n\nCalculation was successful.\n\n\n", "green"))
             print(str(number_of_molecules - num_of_err) + " molecules from " + str(number_of_molecules) + " loaded molecules was calculated. \n\n\n")
         calc.writing_to_file(list_with_data, args.chg_output, args.verbose)
+
     elif args.mode == "parameterization":
         start_time = time()
         para.control_if_arguments_files_exist_for_par(args.right_charges, args.sdf_input, args.parameters, args.new_parameters)
         try:
-            check_call("./calculator_charges.py --mode statistics -v --save_setm --sdf_input " + args.sdf_input + "  --charges " + args.right_charges, shell=True)
+            check_call("./calculator_charges.py --mode statistics -v --sdf_input " + args.sdf_input + "  --charges " + args.right_charges, shell=True)
         except:
-            print("asdfasdf")
             exit()
         print("---------------------------------------\n\n\n")
         try:
@@ -193,7 +198,7 @@ if __name__ == "__main__":
             chooised_num_of_mol = int(args.num_of_parameterized_mol)
         else:
             chooised_num_of_mol = number_of_molecules
-        if args.method[0:2] == "SA":
+        if args.method == "SAEFM":
             set_of_molecule = setm.molecules(chooised_num_of_mol)
             a_types = para.control_of_missing_atoms(set_of_molecule, method, args.parameters)
             if args.atom_types_for_para:
@@ -215,7 +220,6 @@ if __name__ == "__main__":
                 print(str(number_of_molecules) + " molecules was loaded.\n\n\n")
             global_input_parameters_list = method.parameters
             final_parameters = global_input_parameters_list
-            method.load_charges_for_par_with_molecules(args.right_charges)
             for atomic_type in atomic_types:
                 method.set_parameterized_atom_type(atomic_type)
                 input_parameters_list = []
@@ -238,7 +242,7 @@ if __name__ == "__main__":
                 elif args.method_parameterization == "diferential_evolution":
                     res = differential_evolution(calculating_charges, bounds, maxiter=1)
                 else:
-                    res = minimize(calculating_charges, input_parameters_list, method="SLSQP", options={'disp': True}, bounds=bounds)
+                    res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds)
                 for x in range(len(res.x)):
                     final_parameters[global_sorted_parameters.index(sorted_parameters[x])] = res.x[x]
                 print("\n\n")
@@ -268,17 +272,17 @@ if __name__ == "__main__":
                 elif args.method_parameterization == "diferential_evolution":
                     res = differential_evolution(calculating_charges, bounds, maxiter=1)
                 else:
-                    res = minimize(calculating_charges, input_parameters_list, method="SLSQP", options={'disp': True}, bounds=bounds)
+                    res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds)
                 print("\n\n\n")
                 input_parameters_list = res.x
             set_of_molecule = setm.molecules(chooised_num_of_mol)
-            print("Parameterization running for " + str(number_of_molecules) + " molecules.\n\n\n")
+            print("Parameterization running for " + str(chooised_num_of_mol) + " molecules.\n\n\n")
             if args.method_parameterization == "basinhopping":
                 res = basinhopping(calculating_charges, input_parameters_list, niter=1, T=0.1, stepsize=0.05)
             elif args.method_parameterization == "diferential_evolution":
                 res = differential_evolution(calculating_charges, bounds, maxiter=1)
             else:
-                res = minimize(calculating_charges, input_parameters_list, method="SLSQP", options={'disp': True}, bounds=bounds)
+                res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds)
             final_parameters = res.x
         para.writing_new_parameters(args.parameters, args.new_parameters, final_parameters, method)
         if args.verbose:
@@ -289,7 +293,7 @@ if __name__ == "__main__":
                 print(colored("Parameterization was successful.\n\n\n", "green"))
         if args.alarm_after_para:
             try:
-                check_call("play alarm/alarm.mp3 2> /dev/null", shell=True)
+                check_call("play modules/alarm/alarm.mp3 2> /dev/null", shell=True)
             except KeyboardInterrupt:
                 pass
             except:
@@ -357,11 +361,9 @@ if __name__ == "__main__":
         print("")
         print("")
         comp.plotting(args.charges, args.right_charges, args.save_fig)
+
     elif args.mode == "statistics":
         charges_data, sdf_data, charges_names, sdf_names, setm, number_of_lines = stat.is_the_same(args.charges, args.sdf_input)
-        if args.save_setm:
-            with open("setm_file.helped.txt", "w") as setm_file:
-                setm_file.write(str(setm))
         if charges_data == sdf_data and sdf_names == charges_names:
                 print(colored("Sdf file is for the same molecules like charge file!\n\n\n", "green"))
         else:

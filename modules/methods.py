@@ -121,7 +121,7 @@ class arciclass:
                     list_with_right_charges.append(float(l[2]))
         self._list_with_right_charges = list_with_right_charges
 
-    def load_charges_for_par_with_molecules(self, file):
+    def load_calculated_charges_for_par_with_molecules(self, file):
         with open(file, "r") as right_charges_file:
             list_with_right_charges = []
             molecules_charges = []
@@ -136,7 +136,13 @@ class arciclass:
                     molecules_charges = []
             if list_with_right_charges == [] or set(molecules_charges) != list_with_right_charges[-1]:
                 list_with_right_charges.append(molecules_charges)
-        self._list_with_right_charges_by_molecule = list_with_right_charges
+        self.list_with_calculated_charges_by_molecule = list_with_right_charges
+
+    def get_list_with_calculated_charges_by_molecule(self, index):
+        return self.list_with_calculated_charges_by_molecule[index]
+
+
+
 
     def load_charges_for_par_by_atom_types(self, file, list_with_atomic_types):
         with open(file, "r") as right_charges_file:
@@ -283,29 +289,39 @@ class SAEFM(arciclass):
                 bonded_atoms = molecule._bonded_atoms[i]
                 for atom in bonded_atoms:
                     bonded_atoms_elektronegativity.append(self.get_parameter(symbol + "~" + self.symbol(atom, molecule)))
-                charge = (sum(bonded_atoms_elektronegativity) - self.get_parameter(symbol + "~" + symbol)) / len(bonded_atoms_elektronegativity)
+                charge = (sum(bonded_atoms_elektronegativity) - ((self.get_parameter(symbol + "~" + symbol) + (self.get_parameter(symbol + "~" + str(molecule._highest_bond_of_atoms[i])))))) / len(bonded_atoms_elektronegativity)
                 results.append(charge)
         if type(atomic_type) == list:
             return final(results)
         return results
 
-class CSAEFM(arciclass):
-    def calculate(self, molecule):
+
+    def calculate_pokus(self, molecule, atomic_type):
         num_of_atoms = molecule._number_of_atoms
         results = []
         for i in range(1, num_of_atoms + 1):
             symbol = self.symbol(i, molecule)
-            bonded_atoms = molecule._bonded_atoms[i]
-            for atom in bonded_atoms:
-                diff = (charge_i - charge_atom)*(parameter1 - parameter2)
-            """
+            if type(atomic_type) == str and symbol == atomic_type or type(atomic_type) == list and symbol in atomic_type:
+                bonded_atoms_elektronegativity = []
+                bonded_atoms = molecule._bonded_atoms[i]
+                bonded_atoms_elektronegativity_2 = []
+                for atom in bonded_atoms:
+                    bonded_atoms_elektronegativity.append(self.get_parameter(symbol + "~" + self.symbol(atom, molecule)))
+                    bonded_bonded_atoms = molecule._bonded_atoms[atom]
+                    for aatom in bonded_bonded_atoms:
+                        if aatom == i:
+                            continue
+                        bonded_atoms_elektronegativity_2.append(
+                            self.get_parameter(symbol + "~" + self.symbol(atom, molecule) + "-2"))
 
-            napsat molecule.right_charges
-            results = molecule._right_charges
-
-
-            propojit load_chargeds_by molecule s modulem molecule
-            """
+                charge = (sum(bonded_atoms_elektronegativity) + sum(bonded_atoms_elektronegativity_2) - ((
+                    self.get_parameter(
+                        symbol + "~" + symbol) + (
+                        self.get_parameter(
+                            symbol + "~" + str(molecule._highest_bond_of_atoms[ i])))))) / len(  bonded_atoms_elektronegativity)
+                results.append(charge)
+        if type(atomic_type) == list:
+            return final(results)
         return results
 
 
