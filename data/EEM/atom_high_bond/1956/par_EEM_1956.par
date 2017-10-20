@@ -1,0 +1,49 @@
+method: EEM
+length_type: Angstrom
+<<global>>
+kappa 1.5453
+<<key>>
+atom
+high_bond
+<<value_symbol>>
+alfa
+beta
+<<value>>
+C   1   1.1152   2.001   
+C   2   1.0885   1.9209   
+C   3   1.1095   1.9004   
+H   1   0.4749   3.8233   
+N   1   1.7821   2.7692   
+N   2   1.4376   1.9642   
+N   3   1.51   2.1728   
+O   1   2.3125   3.0418   
+O   2   2.3251   3.0839   
+S   1   0.7488   1.6088   
+S   2   0.7703   1.5915   
+<<end>>
+
+
+
+
+Parameterized set of molecules: 1956.sdf
+Method of parameterization: minimize
+
+Statistics for all atoms:
+    RMSD    max deviation    average deviation    pearson**2    num. of atoms
+--------  ---------------  -------------------  ------------  ---------------
+0.054376         0.524843            0.0396217      0.973724            62977
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson**2    num. of molecules
+---------  ---------------  -------------------  ------------  -------------------
+0.0543975         0.143602            0.0411246      0.972402                 1956
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson**2    num. of atoms
+-------------  ---------  ---------------  -------------------  ------------  ---------------
+S              0.10234           0.524843            0.0751502      0.450871              187
+H              0.0303159         0.137753            0.0232216      0.785096            31507
+O              0.0778506         0.364626            0.0662882      0.71106              5285
+N              0.0924518         0.379298            0.0728764      0.93328              2143
+C              0.0663269         0.351572            0.0521086      0.964843            23855
+

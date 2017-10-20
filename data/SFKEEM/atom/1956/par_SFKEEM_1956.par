@@ -1,0 +1,42 @@
+method: SFKEEM
+length_type: Bohr_radius
+<<global>>
+sigma -0.7336
+<<key>>
+atom
+<<value_symbol>>
+alfa
+beta
+<<value>>
+N   0.9129   1.3687   
+O   3.4436   3.6849   
+C   0.1078   0.6589   
+H   -0.8287   2.8634   
+S   -0.1702   0.3792   
+<<end>>
+
+
+
+
+Parameterized set of molecules: 1956.sdf
+Method of parameterization: minimize
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson**2    num. of atoms
+---------  ---------------  -------------------  ------------  ---------------
+0.0459772          0.56612            0.0307353      0.981217            62977
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson**2    num. of molecules
+---------  ---------------  -------------------  ------------  -------------------
+0.0458106         0.124518            0.0338266      0.979449                 1956
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson**2    num. of atoms
+-------------  ---------  ---------------  -------------------  ------------  ---------------
+S              0.108756          0.56612             0.0732771      0.431568              187
+O              0.0525725         0.281552            0.0397715      0.741152             5285
+H              0.0262525         0.152287            0.018973       0.913122            31507
+N              0.115882          0.266299            0.0965513      0.898366             2143
+C              0.0525263         0.313               0.0380227      0.976052            23855
+

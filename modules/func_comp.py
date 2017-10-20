@@ -1,7 +1,8 @@
-from numpy import sqrt
+from numpy import sqrt, polyfit, array
 from scipy import stats
 from matplotlib import pyplot as plt
 import os.path
+from sys import stdin
 from termcolor import colored
 
 
@@ -47,35 +48,36 @@ def making_final_list(dict_with_charges1, dict_with_charges2):
                 break
     for name in list_with_wrong_names:
         list_with_name.remove(name)
-        print("Molecule", name, "is not comparised!")
+        print(colored("Molecule", name, "is not comparised!", "red"))
     final_list = []
     list_of_atoms = []
     for name in list_with_name:
         for x in range(len(dict_with_charges1[name])):
-            final_list.append((dict_with_charges1[name][x][0], float(dict_with_charges1[name][x][1]), float(dict_with_charges2[name][x][1])))
+            final_list.append((dict_with_charges1[name][x][0], float(dict_with_charges1[name][x][1]),
+                               float(dict_with_charges2[name][x][1])))
             list_of_atoms.append(dict_with_charges1[name][x][0])
     final_dict_with_mol = {}
     for name in list_with_name:
         list_with_mol = []
         for x in range(len(dict_with_charges1[name])):
-            list_with_mol.append((dict_with_charges1[name][x][0], float(dict_with_charges1[name][x][1]), float(dict_with_charges2[name][x][1])))
+            list_with_mol.append((dict_with_charges1[name][x][0], float(dict_with_charges1[name][x][1]),
+                                  float(dict_with_charges2[name][x][1])))
         final_dict_with_mol[name] = list_with_mol
     set_of_atoms = set(list_of_atoms)
     return final_list, final_dict_with_mol, tuple(set_of_atoms)
 
 
-def statistics_for_atom_type(atomic_symbol, list_with_data, atoms):
-    list_with_charges1 = []
-    list_with_charges2 = []
+def statistics_for_atom_type(atomic_symbol, list_with_data, atoms, fig_all, charges1, charges2, save_fig, pdf,
+                             axis_range):
     try:
         list_with_atomic_data = []
         for atom in list_with_data:
             if atom[0] == atomic_symbol:
                 list_with_atomic_data.append(atom)
-        list_for_RMSD = []
+        list_for_rmsd = []
         for atom in list_with_atomic_data:
-            list_for_RMSD.append((atom[1]-atom[2])**2)
-        RMSD = sqrt((1.0/len(list_for_RMSD))*sum(list_for_RMSD))
+            list_for_rmsd.append((atom[1]-atom[2])**2)
+        rmsd = sqrt((1.0/len(list_for_rmsd))*sum(list_for_rmsd))
         list_for_deviation = []
         for atom in list_with_atomic_data:
             list_for_deviation.append(abs(atom[1]-atom[2]))
@@ -86,19 +88,59 @@ def statistics_for_atom_type(atomic_symbol, list_with_data, atoms):
         for atom in list_with_atomic_data:
             list_with_charges1.append(atom[1])
             list_with_charges2.append(atom[2])
-        person = stats.pearsonr(list_with_charges1, list_with_charges2)[0]
-    except:
-        RMSD, max_deviation, average_deviation, person = "-", "-", "-", "-"
-    colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", "#C0C0C0", "#800000", "#008000", "#800080", "#008080", "#000080"] * 10
-    plt.scatter(list_with_charges1, list_with_charges2, marker="o", color=colors[atoms.index(atomic_symbol)], label=atomic_symbol)
-    return [atomic_symbol, RMSD, max_deviation, average_deviation, person, len(list_with_atomic_data)]
+        person_2 = stats.pearsonr(list_with_charges1, list_with_charges2)[0]**2
+    except ZeroDivisionError:
+        return [atomic_symbol, "-", "-", "-", "-", "-"]
+
+    if save_fig is not None:
+        fig_x = plt.figure(atomic_symbol, figsize=(11, 9))
+        figx = fig_x.add_subplot(111)
+        figx.set_title(atomic_symbol)
+        figx.set_xlabel(charges1, fontsize=15)
+        figx.set_ylabel(charges2, fontsize=15)
+        figx.set_xlim(axis_range)
+        figx.set_ylim(axis_range)
+        m, b = polyfit(list_with_charges1, list_with_charges2, 1)
+        x = array([x / 20.0 for x in range(-200, 200)])
+        figx.plot(x, x, "-", label="y = x", color="black", linewidth=0.5)
+        figx.plot(x, m * x + b, ":", color="black", linewidth=0.5, label="y = " + str(round(m, 6))[:4] + "*x +" +
+                                                                         str(round(b, 6))[:4])
+        figx.plot(list_with_charges1, list_with_charges2, ".", label=atomic_symbol, color="black")
+        figx.legend()
+        plt.text(axis_range[1], axis_range[0], "Num. of atoms: " + str(len(list_with_charges1)) + "\nrmsd: " +
+                 str(rmsd)[:6] + "\nPearson**2: " + str(person_2)[:6], ha='right', va='bottom', fontsize=15)
+        pdf.savefig(fig_x)
+        plt.close()
+    colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", "#C0C0C0", "#800000",
+              "#008000", "#800080", "#008080", "#000080"] * 10
+    fig_all.scatter(list_with_charges1, list_with_charges2, marker=".", color=colors[atoms.index(atomic_symbol)],
+                    label=atomic_symbol)
+    return [atomic_symbol, rmsd, max_deviation, average_deviation, person_2, len(list_with_atomic_data)]
 
 
-def statistics_for_all_atoms(list_with_data):
-    list_for_RMSD = []
-    for atom in list_with_data:
-        list_for_RMSD.append((atom[1] - atom[2]) ** 2)
-    RMSD = sqrt((1.0 / len(list_for_RMSD)) * sum(list_for_RMSD))
+def statistics_for_all_atoms(list_with_data, fitting=False):
+    list_for_rmsd = []
+    if fitting:
+        min1 = 10
+        min2 = 10
+        max1 = -10
+        max2 = -10
+        for atom in list_with_data:
+            list_for_rmsd.append((atom[1] - atom[2]) ** 2)
+            if atom[1] < min1:
+                min1 = atom[1]
+            if atom[1] > max1:
+                max1 = atom[1]
+            if atom[2] < min2:
+                min2 = atom[2]
+            if atom[2] > max2:
+                max2 = atom[2]
+        mini = min(min1, min2) - 0.25
+        maxi = max(max1, max2) + 0.25
+    else:
+        for atom in list_with_data:
+            list_for_rmsd.append((atom[1] - atom[2]) ** 2)
+    rmsd = sqrt((1.0 / len(list_for_rmsd)) * sum(list_for_rmsd))
     list_for_deviation = []
     for atom in list_with_data:
         list_for_deviation.append(abs(atom[1] - atom[2]))
@@ -109,57 +151,87 @@ def statistics_for_all_atoms(list_with_data):
     for atom in list_with_data:
         list_with_charges1.append(atom[1])
         list_with_charges2.append(atom[2])
-    person = stats.pearsonr(list_with_charges1, list_with_charges2)[0]
-    return [[RMSD, max_deviation, average_deviation, person, len(list_with_data)]], len(list_with_data)
+    if fitting:
+        m, b = polyfit(list_with_charges1, list_with_charges2, 1)
+        x = array([x/20.0 for x in range(-200, 200)])
+        plt.plot(x, x, "-", label="y = x", color="black", linewidth=0.5)
+        plt.plot(x, m*x + b, ":", color="black", linewidth=0.5, label="y = " + str(round(m, 6))[:4] + "*x +" +
+                                                                      str(round(b, 6))[:4])
+    person_2 = stats.pearsonr(list_with_charges1, list_with_charges2)[0]**2
+    if fitting:
+        return [[rmsd, max_deviation, average_deviation, person_2, len(list_with_data)]], [mini, maxi], \
+               len(list_with_charges1)
+    return [[rmsd, max_deviation, average_deviation, person_2, len(list_with_data)]]
 
 
-def average(list):
-    return sum(list)/len(list)
+def average(list_of_number):
+    return sum(list_of_number)/len(list_of_number)
 
 
-def statistics_for_molecules(dictionary):
-    list_with_RMSD = []
+def statistics_for_molecules(dictionary, mol_into_log):
+    list_with_rmsd = []
     list_with_max_deviation = []
     list_with_average_deviation = []
-    list_with_pearson = []
+    list_with_pearson_2 = []
     for key in dictionary:
-        data = statistics_for_all_atoms(dictionary[key])[0]
-        list_with_RMSD.append(data[0][0])
+        data = statistics_for_all_atoms(dictionary[key])
+        list_with_rmsd.append(data[0][0])
         list_with_max_deviation.append(data[0][1])
         list_with_average_deviation.append(data[0][2])
-        list_with_pearson.append(data[0][3])
-    return [[average(list_with_RMSD), average(list_with_max_deviation), average(list_with_average_deviation), average(list_with_pearson), len(dictionary)]]
+        list_with_pearson_2.append(data[0][3])
+        if mol_into_log is not None:
+            with open(mol_into_log, "a") as mol_log:
+                mol_log.write(str(key) + " " + str(data[0][0])[:5] + " " + str(data[0][1])[:5] + " " +
+                              str(data[0][2])[:5] + " " + str(data[0][3])[:5] + "\n")
+    return [[average(list_with_rmsd), average(list_with_max_deviation), average(list_with_average_deviation),
+             average(list_with_pearson_2), len(dictionary)]]
 
 
-def plotting(charges1, charges2, save_fig):
-    plt.xlabel(charges2)
-    plt.ylabel(charges1)
-    plt.title("Correlation graph")
-    plt.xlim([-2, 3])
-    plt.ylim([-2, 3])
-    x = [-100, 100]
-    y = [-100, 100]
-    plt.legend()
-    plt.plot(x, y)
+def plotting(charges1, charges2, save_fig, fig_all, fig, pdf, rmsd, person_2, axis_range, number_of_atoms):
+    fig_all.set_xlabel(charges2, fontsize=15)
+    fig_all.set_ylabel(charges1, fontsize=15)
+    fig_all.set_title("Correlation graph", fontsize=15)
+    fig_all.set_xlim(axis_range)
+    fig_all.set_ylim(axis_range)
+    fig_all.legend()
+    fig_all.text(axis_range[1], axis_range[0], "Num. of atoms: " + str(number_of_atoms) + "\nrmsd: " + str(rmsd)[:6] +
+                 "\nPearson**2: " + str(person_2)[:6], ha='right', va='bottom', fontsize=15)
     if save_fig is not None:
-        plt.savefig(save_fig)
+        pdf.savefig(fig)
+        pdf.close()
     plt.show()
 
 
-def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig):
+def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, log):
     if not os.path.isfile(charges1):
         exit(colored("There is no charges file with name " + charges1 + "\n", "red"))
     if not os.path.isfile(charges2):
         exit(colored("There is no charges file with name " + charges2 + "\n", "red"))
-    if save_fig is None:
-        if os.path.isfile(str(save_fig) + ".png"):
-            print(colored("Warning. There is some file with have the same name like your saved picture from comparison!", "red"))
+    try:
+        if os.path.isfile(save_fig):
+            print(colored("Warning. There is some file with have the same name like your saved picture from" +
+                          " comparison!", "red"))
             print("If you want to replace exist file, please write yes and press enter. Else press enter.")
             decision = stdin.readline().rstrip('\n')
             if decision == "yes":
-                os.remove(save_fig + ".png")
+                os.remove(save_fig)
                 print(colored("Exist file was removed.\n\n\n", "green"))
             else:
                 print("\n\n")
                 exit(1)
-
+    except TypeError:
+        pass
+    try:
+        if os.path.isfile(log):
+            print(colored("Warning. There is some file with have the same name like your log file from comparison!",
+                          "red"))
+            print("If you want to replace exist file, please write yes and press enter. Else press enter.")
+            decision = stdin.readline().rstrip('\n')
+            if decision == "yes":
+                os.remove(log)
+                print(colored("Exist file was removed.\n\n\n", "green"))
+            else:
+                print("\n\n")
+                exit(1)
+    except TypeError:
+        pass

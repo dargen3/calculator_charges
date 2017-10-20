@@ -1,0 +1,49 @@
+method: SFKEEM
+length_type: Bohr_radius
+<<global>>
+sigma 0.8126
+<<key>>
+atom
+high_bond
+<<value_symbol>>
+alfa
+beta
+<<value>>
+C   1   0.2139   0.1364   
+C   2   0.1797   0.1441   
+C   3   1.5829   0.2764   
+H   1   0.01   0.671   
+N   1   0.7113   0.6507   
+N   2   0.5882   0.4965   
+N   3   1.4975   0.3118   
+O   1   0.8098   0.6774   
+O   2   0.7795   0.6281   
+S   1   -0.322   2.2048   
+S   2   0.2116   0.0319   
+<<end>>
+
+
+
+
+Parameterized set of molecules: proteins.sdf
+Method of parameterization: minimize
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson**2    num. of atoms
+---------  ---------------  -------------------  ------------  ---------------
+0.0380217         0.286256            0.0271704       0.99027            30409
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson**2    num. of molecules
+---------  ---------------  -------------------  ------------  -------------------
+0.0385513         0.184525            0.0276378      0.989947                   35
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson**2    num. of atoms
+-------------  ---------  ---------------  -------------------  ------------  ---------------
+C              0.0511906         0.215785            0.0385183      0.984062             9623
+S              0.12428           0.286256            0.0985806      0.342318               79
+N              0.0430208         0.175481            0.0315677      0.775708             2589
+H              0.0251557         0.116598            0.0193711      0.936578            15141
+O              0.0325318         0.145604            0.024437       0.473966             2977
+

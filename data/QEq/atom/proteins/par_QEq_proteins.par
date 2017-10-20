@@ -1,0 +1,43 @@
+method: QEq
+length_type: Angstrom 
+<<global>>
+correlation 1.5801
+<<key>>
+atom
+<<value_symbol>>
+electronegativity
+hardness
+radius
+<<value>>
+H   0.4554   2.2089   1.3335   
+N   1.2184   2.2928   4.0   
+O   1.0666   1.8721   2.9367   
+S   0.6021   1.3432   2.0027   
+C   0.7249   1.3713   0.9365   
+<<end>>
+
+
+
+
+Parameterized set of molecules: proteins.sdf
+Method of parameterization: minimize
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson**2    num. of atoms
+---------  ---------------  -------------------  ------------  ---------------
+0.0425931         0.250315            0.0327587      0.987786            30409
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson**2    num. of molecules
+---------  ---------------  -------------------  ------------  -------------------
+0.0428766         0.173537            0.0330909      0.987627                   35
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson**2    num. of atoms
+-------------  ---------  ---------------  -------------------  ------------  ---------------
+S              0.103531          0.250315            0.0918336      0.65168                79
+H              0.0332129         0.180656            0.0256162      0.889791            15141
+O              0.0501854         0.229002            0.0393751      0.236858             2977
+N              0.0315069         0.170354            0.023833       0.844156             2589
+C              0.0535069         0.198336            0.0438665      0.982151             9623
+

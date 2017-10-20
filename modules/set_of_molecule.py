@@ -1,4 +1,4 @@
-from molecules import Molecule
+from .molecules import Molecule
 from sys import exit
 from termcolor import colored
 
@@ -9,9 +9,9 @@ class Set_of_molecule:
             num_of_molecules = 0
             num_of_lines = 0
             for line in if_sdf:
+                num_of_lines += 1
                 if line.strip() == "$$$$":
                     num_of_molecules += 1
-                num_of_lines += 1
             self._num_of_lines = num_of_lines
             if line.strip() != "$$$$":
                 exit(colored("ERROR! End of sdf file must be: $$$$", "red"))
@@ -102,22 +102,20 @@ class Set_of_molecule:
                         print(colored(sdf_file.readline(), "red"))
                     exit(colored("ERROR! Sdf file is not correct!", "red"))
         self.list_with_molecules = list_with_all_molecules
-        self._number_of_molecules = len(list_with_all_molecules)
 
-    def molecules(self, returned_molecule):
-        #def molecules(self, returned_molecule=self.number_of_molecules):
-        if returned_molecule > self._number_of_molecules:
-            exit(colored("ERROR! You want to more molecules from set, then molecules are in set!", "red"))
-        return self.list_with_molecules[:returned_molecule]
+    def __len__(self):
+        return len(self.list_with_molecules)
+
+
+    def __getitem__(self, index):
+        return self.list_with_molecules[index]
+
+    def __iter__(self):
+        return [x for x in self.list_with_molecules]
 
     @property
-    def _number_of_molecules(self):
-        return self._number_of_molecules
-
-    @property
-    def _num_of_lines(self):
+    def num_of_lines(self):
         return self._num_of_lines
-
 
 """
 format of molecule in self.list_with_molecules

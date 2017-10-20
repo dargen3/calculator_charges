@@ -4,7 +4,7 @@ from termcolor import colored
 from sys import stdin
 
 
-def is_the_same(charges, sdf_input):
+def is_the_same(charges, sdf_input, logger):
     if not os.path.isfile(charges):
         exit(colored("There is no charges file with name " + charges + "\n", "red"))
     if not os.path.isfile(sdf_input):
@@ -30,32 +30,33 @@ def is_the_same(charges, sdf_input):
                 number_of_actual_lines += 1
                 actual_number += 1
                 list_with_mol_data.append(line.split()[1])
-                number_of_atoms_chg = number_of_atoms_chg + 1
+                number_of_atoms_chg += 1
             if number_of_actual_lines != number_of_lines:
                 charges_file.readline()
                 number_of_actual_lines += 1
             charges_data[name] = list_with_mol_data
             charges_names.append(name)
-    print(str(charges))
-    print("Number of atoms is: " + str(number_of_atoms_chg))
-    print("Number of molecules is: " + str(len(charges_data)) + "\n\n\n")
+    logger.info(str(charges))
+    logger.info("Number of atoms is: " + str(number_of_atoms_chg))
+    logger.info("Number of molecules is: " + str(len(charges_data)) + "\n\n\n")
     setm = Set_of_molecule(sdf_input)
-    number_of_molecules = setm._number_of_molecules
-    set_of_molecule = setm.molecules(number_of_molecules)
+    number_of_molecules = len(setm)
+    set_of_molecule = setm[:number_of_molecules]
     sdf_data = {}
     sdf_names = []
     number_of_atoms_sdf = 0
     number_of_molecule_sdf = 0
     for molecule in set_of_molecule:
-        number_of_atoms_sdf = number_of_atoms_sdf + molecule._number_of_atoms
+        number_of_atoms_sdf += len(molecule)
         number_of_molecule_sdf += 1
-        name_of_molecule = molecule._name
+        name_of_molecule = molecule.name
         sdf_names.append(name_of_molecule)
-        sdf_data[name_of_molecule] = molecule._atoms_types
-    print(sdf_input)
-    print("Number of atoms is: " + str(number_of_atoms_sdf))
-    print("Number of molecules is: " + str(number_of_molecule_sdf) + "\n\n\n")
-    print(colored("Number of together molecules: " + str(len(set(charges_names) & set(sdf_names))) + "\n\n\n", "yellow"))
+        sdf_data[name_of_molecule] = molecule.atoms_types
+    logger.info(sdf_input)
+    logger.info("Number of atoms is: " + str(number_of_atoms_sdf))
+    logger.info("Number of molecules is: " + str(number_of_molecule_sdf) + "\n\n\n")
+    logger.info(colored("Number of together molecules: " + str(len(set(charges_names) & set(sdf_names))) + "\n\n\n",
+                        "yellow"))
     return charges_data, sdf_data, charges_names, sdf_names, setm, number_of_lines
 
 
@@ -72,7 +73,7 @@ def create_new_files(sdf_names, charges_names, sdf_input, charges, setm, number_
     with open(sdf_input, "r") as sdf_input:
         with open(new_sdf_file, "w") as new_sdf_file:
             actual_line = 0
-            while actual_line < setm._num_of_lines:
+            while actual_line < setm.num_of_lines:
                 line = sdf_input.readline()
                 actual_line += 1
                 if line.split()[0].strip() not in together_names:

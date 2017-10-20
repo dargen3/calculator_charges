@@ -1,18 +1,18 @@
-from numpy import sqrt, empty, zeros, array
-from atoms import Atom
+from numpy import sqrt, array
+from .atoms import Atom
 from numba import jit
-from sys import exit
 from scipy import spatial
 
+
 @jit(nopython=True)
-def bonded_atoms(index, set):
-    bonded_atoms = []
-    for bond in set:
+def bonded_atoms(index, set_of_bonds):
+    bonded_atoms_list = []
+    for bond in set_of_bonds:
         if bond[0] == index:
-            bonded_atoms.append(bond[1])
+            bonded_atoms_list.append(bond[1])
         elif bond[1] == index:
-            bonded_atoms.append(bond[0])
-    return bonded_atoms
+            bonded_atoms_list.append(bond[0])
+    return bonded_atoms_list
 
 
 @jit(nopython=True)
@@ -60,46 +60,44 @@ class Molecule:
         list_of_highest_bond = []
         for x in list_of_all_bonds[1:]:
             list_of_highest_bond.append(max(x))
-        list_of_highest_bond.insert(0,0)
+        list_of_highest_bond.insert(0, 0)
         self._highest_bond_of_atoms = list_of_highest_bond
         self._bonded_atoms = list_of_atoms
-        atom_coords = array([atom.position for atom in self.atoms])
-        self._distance_matrix = spatial.distance.cdist(atom_coords, atom_coords)
-
+        atom_cords = array([atom.position for atom in self.atoms])
+        self._distance_matrix = spatial.distance.cdist(atom_cords, atom_cords)
 
     @property
-    def _highest_bond_of_atoms(self):
+    def highest_bond_of_atoms(self):
         return self._highest_bond_of_atoms
 
     @property
-    def _name(self):
+    def name(self):
         return self._name
 
-    @property
-    def _number_of_atoms(self):
+    def __len__(self):
         return self._number_of_atoms
 
     @property
-    def _matrix_of_distance(self):
+    def matrix_of_distance(self):
         return self._distance_matrix
 
     @property
-    def _atoms_types(self):
+    def atoms_types(self):
         return self._atoms_types
 
     @property
-    def _formal_charge(self):
+    def formal_charge(self):
         return self._total_charge
 
     @property
-    def _bonded_atoms(self):
+    def bonded_atoms(self):
         return self._bonded_atoms
 
     def set_length_correction(self, correction):
         if correction == 1:
             pass
         else:
-            self._matrix_of_distance = self._matrix_of_distance * correction
+            self._distance_matrix *= correction
 
     def get_atom_type_with_idx(self, index):
         return self.atoms[index - 1].symbol

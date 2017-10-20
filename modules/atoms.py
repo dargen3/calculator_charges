@@ -1,19 +1,19 @@
 class Atom:
     def __init__(self, atom):
-        self.symbol = atom[0]
-        self.index = atom[1]
-        self.x = atom[2]
-        self.y = atom[3]
-        self.z = atom[4]
+        self._symbol = atom[0]
+        self._index = atom[1]
+        self._x = atom[2]
+        self._y = atom[3]
+        self._z = atom[4]
 
     @property
     def symbol(self):
-        return self.symbol
+        return self._symbol
 
     @property
     def index(self):
-        return self.index
+        return self._index
 
     @property
     def position(self):
-        return self.x, self.y, self.z
+        return self._x, self._y, self._z

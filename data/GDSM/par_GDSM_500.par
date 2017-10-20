@@ -1,0 +1,43 @@
+method: GDSM
+length_type: Angstrom
+<<global>>
+<<key>>
+atom
+<<value_symbol>>
+1
+2
+3
+4
+<<value>>
+C   0.9413   0.8928   1.0365   1.1744   
+H   0.6659   0.6659   0.6659   1.2932   
+N   1.2495   1.2157   1.2317   1.1744   
+O   0.874   1.4255   1.3721   1.2038   
+S   1.0838   0.697   0.7969   1.1203   
+<<end>>
+
+
+
+
+Parameterized set of molecules: 500.sdf
+Method of parameterization: minimize
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson**2    num. of atoms
+---------  ---------------  -------------------  ------------  ---------------
+0.0614779         0.500857            0.0429025       0.97339            16168
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson**2    num. of molecules
+---------  ---------------  -------------------  ------------  -------------------
+0.0608718         0.170775            0.0443225      0.975552                  500
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson**2    num. of atoms
+-------------  ---------  ---------------  -------------------  ------------  ---------------
+O              0.0585033         0.248732            0.0431942      0.758025             1278
+N              0.10083           0.500857            0.0787282      0.924538              916
+H              0.0462429         0.224304            0.0304278      0.786585             7456
+S              0.123513          0.35392             0.0990768      0.987633              132
+C              0.0679241         0.36385             0.0511091      0.963154             6386
+

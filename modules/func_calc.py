@@ -4,10 +4,8 @@ from sys import stdin
 
 
 def writing_to_list(molecule, results):
-    num_of_atoms = molecule._number_of_atoms
-    list_with_molecule_data = []
-    list_with_molecule_data.append(molecule._name)
-    list_with_molecule_data.append(str(num_of_atoms))
+    num_of_atoms = len(molecule)
+    list_with_molecule_data = [molecule.name, str(num_of_atoms)]
     for i in range(num_of_atoms):
         result = results[i]
         list_with_molecule_data.append([i + 1, molecule.get_atom_type_with_idx(i + 1), result])
@@ -15,9 +13,7 @@ def writing_to_list(molecule, results):
     return list_with_molecule_data
 
 
-def writing_to_file(list_with_data, chg_output, verbose):
-    if verbose:
-        print("Writing to " + str(chg_output) + ".")
+def writing_to_file(list_with_data, chg_output):
     with open(chg_output, "a") as file_with_results:
         for molecule in list_with_data:
             for item in molecule:
@@ -26,8 +22,6 @@ def writing_to_file(list_with_data, chg_output, verbose):
                         '{0:>3} {1:>3} {2:>15}'.format(item[0], item[1], str(float("{0:.6f}".format(item[2]))) + "\n"))
                 else:
                     file_with_results.write(item + "\n")
-    if verbose:
-        print("Writing to " + str(chg_output) + " was successful.\n\n")
 
 
 def control_if_arguments_files_exist_for_calc(parameters, sdf_input, chg_output):

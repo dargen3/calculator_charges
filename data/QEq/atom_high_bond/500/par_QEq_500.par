@@ -1,0 +1,50 @@
+method: QEq
+length_type: Angstrom 
+<<global>>
+correlation 6.5894
+<<key>>
+atom
+high_bond
+<<value_symbol>>
+electronegativity
+hardness
+radius
+<<value>>
+H   1   2.3824   10.2033   1.2293   
+C   1   4.0089   6.1566   0.9246   
+C   2   4.0012   6.0082   1.0801   
+C   3   5.5799   9.5154   0.9522   
+N   1   6.4337   8.2909   1.5836   
+N   2   5.3587   6.6861   1.1827   
+N   3   7.1702   9.729   0.9487   
+O   1   9.2181   13.0206   29.9827   
+O   2   23.2562   37.4404   36.0501   
+S   1   2.729   7.0129   7.8841   
+S   2   3.8605   5.4989   24.398   
+<<end>>
+
+
+
+
+Parameterized set of molecules: 500.sdf
+Method of parameterization: minimize
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson**2    num. of atoms
+---------  ---------------  -------------------  ------------  ---------------
+0.0450467          0.59814            0.0316058      0.985723            16168
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson**2    num. of molecules
+---------  ---------------  -------------------  ------------  -------------------
+0.0436342         0.122758            0.0323593      0.986951                  500
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson**2    num. of atoms
+-------------  ---------  ---------------  -------------------  ------------  ---------------
+H              0.0235174         0.117472            0.0184085      0.899038             7456
+O              0.0563804         0.203332            0.0480119      0.639593             1278
+N              0.0670224         0.59814             0.0466896      0.959786              916
+S              0.131198          0.422622            0.0998005      0.976739              132
+C              0.0534369         0.314574            0.0401578      0.977205             6386
+
