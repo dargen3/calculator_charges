@@ -6,7 +6,7 @@ from os import getcwd, rename
 from tempfile import NamedTemporaryFile
 
 
-def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters, new_parameters):
+def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters, new_parameters, force):
     if not os.path.isfile(right_charges):
         exit(colored("There is no charges file with name " + right_charges + "\n", "red"))
     if not os.path.isfile(sdf_input):
@@ -14,13 +14,16 @@ def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameter
     if not os.path.isfile(parameters):
         exit(colored("There is no parameters file with name " + parameters + "\n", "red"))
     if os.path.isfile(new_parameters):
-        print(colored("Warning. There is some file with have the same name like your new parameters file!", "red"))
-        print("If you want to replace exist file, please write yes and press enter. Else press enter.")
-        decision = stdin.readline().rstrip('\n')
-        if decision == "yes":
-            print(colored("Exist file will be replaced.\n\n\n", "green"))
+        if force:
+            pass
         else:
-            exit("\n")
+            print(colored("Warning. There is some file with have the same name like your new parameters file!", "red"))
+            print("If you want to replace exist file, please write yes and press enter. Else press enter.")
+            decision = stdin.readline().rstrip('\n')
+            if decision == "yes":
+                print(colored("Exist file will be replaced.\n\n\n", "green"))
+            else:
+                exit("\n")
 
 
 def control_of_missing_atoms(set_of_molecule, method, parameters):

@@ -117,6 +117,9 @@ class Set_of_molecule:
     def num_of_lines(self):
         return self._num_of_lines
 
+
+
+
 """
 format of molecule in self.list_with_molecules
 

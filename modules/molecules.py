@@ -66,6 +66,8 @@ class Molecule:
         atom_cords = array([atom.position for atom in self.atoms])
         self._distance_matrix = spatial.distance.cdist(atom_cords, atom_cords)
 
+
+
     @property
     def highest_bond_of_atoms(self):
         return self._highest_bond_of_atoms

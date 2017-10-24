@@ -24,18 +24,21 @@ def writing_to_file(list_with_data, chg_output):
                     file_with_results.write(item + "\n")
 
 
-def control_if_arguments_files_exist_for_calc(parameters, sdf_input, chg_output):
+def control_if_arguments_files_exist_for_calc(parameters, sdf_input, chg_output, force):
     if not os.path.isfile(parameters):
         exit(colored("There is no parameters file with name " + parameters + "\n", "red"))
     if not os.path.isfile(sdf_input):
         exit(colored("There is no sdf file with name " + sdf_input + "\n", "red"))
     if os.path.isfile(chg_output):
-        print(colored("Warning. There is some file with have the same name like your chg output!", "red"))
-        print("If you want to replace exist file, please write yes and press enter. Else press enter.")
-        decision = stdin.readline().rstrip('\n')
-        if decision == "yes":
-            os.remove(chg_output)
-            print(colored("Exist file was removed.\n\n\n", "green"))
+        if force:
+            pass
         else:
-            print("\n\n")
-            exit(1)
+            print(colored("Warning. There is some file with have the same name like your chg output!", "red"))
+            print("If you want to replace exist file, please write yes and press enter. Else press enter.")
+            decision = stdin.readline().rstrip('\n')
+            if decision == "yes":
+                os.remove(chg_output)
+                print(colored("Exist file was removed.\n\n\n", "green"))
+            else:
+                print("\n\n")
+                exit(1)

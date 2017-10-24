@@ -20,6 +20,7 @@ import logging
 from math import isnan
 
 
+
 def settings_argparse():
     global args
     global logger
@@ -50,6 +51,7 @@ def settings_argparse():
     parser.add_argument("--statistic_on_end_of_para",
                         help="PRIVATE ARGUMENT! Statistics data from para. is added to end of parameters file.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity.")
+    parser.add_argument("-f", "--rewriting_with_force", action="store_true", help="All existed files with the same names like your outputs will be replaced.")
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     if args.mode == "calculation":
@@ -129,7 +131,8 @@ if __name__ == "__main__":
     settings_argparse()
     warnings.filterwarnings("ignore")
     if args.mode == "calculation":
-        calc.control_if_arguments_files_exist_for_calc(args.parameters, args.sdf_input, args.chg_output)
+        calc.control_if_arguments_files_exist_for_calc(args.parameters, args.sdf_input, args.chg_output,
+                                                       args.rewriting_with_force)
         list_with_data = []
         logger.info("Loading molecule data from " + str(args.sdf_input) + " ...")
         setm = Set_of_molecule(args.sdf_input)
@@ -185,7 +188,7 @@ if __name__ == "__main__":
 
     elif args.mode == "parameterization":
         para.control_if_arguments_files_exist_for_par(args.right_charges, args.sdf_input, args.parameters,
-                                                      args.new_parameters)
+                                                      args.new_parameters, args.rewriting_with_force)
         call_stat = "./calculator_charges.py --mode statistics --sdf_input " + args.sdf_input + \
                     "  --charges " + args.right_charges
         if args.verbose:
@@ -334,6 +337,9 @@ if __name__ == "__main__":
         if args.verbose:
             call1 += " -v"
             call2 += " -v"
+        if args.rewriting_with_force:
+            call1 += " -f"
+            call2 += " -f"
         if args.save_fig:
             call2 = call2 + " --save_fig " + args.save_fig
         exit_value = call(call1, shell=True)
@@ -344,7 +350,7 @@ if __name__ == "__main__":
         fig = plt.figure(figsize=(11, 9))
         fig_all = fig.add_subplot(111)
         comp.control_if_arguments_files_exist_for_com(args.charges, args.right_charges, args.save_fig,
-                                                      args.all_mol_to_log)
+                                                      args.all_mol_to_log, args.rewriting_with_force)
         if args.save_fig:
             pdf = matplotlib.backends.backend_pdf.PdfPages(args.save_fig)
         else:
@@ -410,6 +416,7 @@ if __name__ == "__main__":
                       fig_all, fig, pdf, RMSD, pearson_2, axis_range, number_of_atoms)
 
     elif args.mode == "statistics":
+        stat.control_if_arguments_files_exist_for_stat(args.charges, args.sdf_input)
         charges_data, sdf_data, charges_names, sdf_names, setm, number_of_lines = stat.is_the_same(args.charges,
                                                                                                    args.sdf_input,
                                                                                                    logger)

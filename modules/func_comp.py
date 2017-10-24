@@ -201,37 +201,42 @@ def plotting(charges1, charges2, save_fig, fig_all, fig, pdf, rmsd, person_2, ax
         pdf.close()
     plt.show()
 
-
-def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, log):
+def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, log, force):
     if not os.path.isfile(charges1):
         exit(colored("There is no charges file with name " + charges1 + "\n", "red"))
     if not os.path.isfile(charges2):
         exit(colored("There is no charges file with name " + charges2 + "\n", "red"))
     try:
         if os.path.isfile(save_fig):
-            print(colored("Warning. There is some file with have the same name like your saved picture from" +
-                          " comparison!", "red"))
-            print("If you want to replace exist file, please write yes and press enter. Else press enter.")
-            decision = stdin.readline().rstrip('\n')
-            if decision == "yes":
-                os.remove(save_fig)
-                print(colored("Exist file was removed.\n\n\n", "green"))
+            if force:
+                pass
             else:
-                print("\n\n")
-                exit(1)
+                print(colored("Warning. There is some file with have the same name like your saved picture from" +
+                              " comparison!", "red"))
+                print("If you want to replace exist file, please write yes and press enter. Else press enter.")
+                decision = stdin.readline().rstrip('\n')
+                if decision == "yes":
+                    os.remove(save_fig)
+                    print(colored("Exist file was removed.\n\n\n", "green"))
+                else:
+                    print("\n\n")
+                    exit(1)
     except TypeError:
         pass
     try:
         if os.path.isfile(log):
-            print(colored("Warning. There is some file with have the same name like your log file from comparison!",
-                          "red"))
-            print("If you want to replace exist file, please write yes and press enter. Else press enter.")
-            decision = stdin.readline().rstrip('\n')
-            if decision == "yes":
-                os.remove(log)
-                print(colored("Exist file was removed.\n\n\n", "green"))
+            if force:
+                pass
             else:
-                print("\n\n")
-                exit(1)
+                print(colored("Warning. There is some file with have the same name like your log file from comparison!",
+                              "red"))
+                print("If you want to replace exist file, please write yes and press enter. Else press enter.")
+                decision = stdin.readline().rstrip('\n')
+                if decision == "yes":
+                    os.remove(log)
+                    print(colored("Exist file was removed.\n\n\n", "green"))
+                else:
+                    print("\n\n")
+                    exit(1)
     except TypeError:
         pass

@@ -5,10 +5,6 @@ from sys import stdin
 
 
 def is_the_same(charges, sdf_input, logger):
-    if not os.path.isfile(charges):
-        exit(colored("There is no charges file with name " + charges + "\n", "red"))
-    if not os.path.isfile(sdf_input):
-        exit(colored("There is no sdf file with name " + sdf_input + "\n", "red"))
     charges_data = {}
     charges_names = []
     number_of_atoms_chg = 0
@@ -58,6 +54,13 @@ def is_the_same(charges, sdf_input, logger):
     logger.info(colored("Number of together molecules: " + str(len(set(charges_names) & set(sdf_names))) + "\n\n\n",
                         "yellow"))
     return charges_data, sdf_data, charges_names, sdf_names, setm, number_of_lines
+
+
+def control_if_arguments_files_exist_for_stat(charges, sdf_input):
+    if not os.path.isfile(charges):
+        exit(colored("There is no charges file with name " + charges + "\n", "red"))
+    if not os.path.isfile(sdf_input):
+        exit(colored("There is no sdf file with name " + sdf_input + "\n", "red"))
 
 
 def create_new_files(sdf_names, charges_names, sdf_input, charges, setm, number_of_lines):
