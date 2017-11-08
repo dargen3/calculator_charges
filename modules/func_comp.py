@@ -6,6 +6,7 @@ from sys import stdin
 from termcolor import colored
 
 
+
 def making_dictionary_with_charges(file_with_charges):
     charges_data = {}
     with open(file_with_charges, "r+") as charges:
@@ -67,8 +68,8 @@ def making_final_list(dict_with_charges1, dict_with_charges2):
     return final_list, final_dict_with_mol, tuple(set_of_atoms)
 
 
-def statistics_for_atom_type(atomic_symbol, list_with_data, atoms, fig_all, charges1, charges2, save_fig, pdf,
-                             axis_range):
+def statistics_for_atom_type(atomic_symbol, list_with_data, atoms, fig_all, charges1, charges2, save_fig,
+                             axis_range, name_of_all_set):
     try:
         list_with_atomic_data = []
         for atom in list_with_data:
@@ -91,10 +92,9 @@ def statistics_for_atom_type(atomic_symbol, list_with_data, atoms, fig_all, char
         person_2 = stats.pearsonr(list_with_charges1, list_with_charges2)[0]**2
     except ZeroDivisionError:
         return [atomic_symbol, "-", "-", "-", "-", "-"]
-
-    if save_fig is not None:
+    if save_fig is not False:
         fig_x = plt.figure(atomic_symbol, figsize=(11, 9))
-        figx = fig_x.add_subplot(111)
+        figx = fig_x.add_subplot(111, rasterized=True)
         figx.set_title(atomic_symbol)
         figx.set_xlabel(charges1, fontsize=15)
         figx.set_ylabel(charges2, fontsize=15)
@@ -109,8 +109,8 @@ def statistics_for_atom_type(atomic_symbol, list_with_data, atoms, fig_all, char
         figx.legend()
         plt.text(axis_range[1], axis_range[0], "Num. of atoms: " + str(len(list_with_charges1)) + "\nrmsd: " +
                  str(rmsd)[:6] + "\nPearson**2: " + str(person_2)[:6], ha='right', va='bottom', fontsize=15)
-        pdf.savefig(fig_x)
-        plt.close()
+        name = "{}-{}".format(name_of_all_set, atomic_symbol)
+        plt.savefig(name)
     colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", "#C0C0C0", "#800000",
               "#008000", "#800080", "#008080", "#000080"] * 10
     fig_all.scatter(list_with_charges1, list_with_charges2, marker=".", color=colors[atoms.index(atomic_symbol)],
@@ -187,7 +187,7 @@ def statistics_for_molecules(dictionary, mol_into_log):
              average(list_with_pearson_2), len(dictionary)]]
 
 
-def plotting(charges1, charges2, save_fig, fig_all, fig, pdf, rmsd, person_2, axis_range, number_of_atoms):
+def plotting(charges1, charges2, save_fig_bool, save_fig_name, fig_all, fig, rmsd, person_2, axis_range, number_of_atoms):
     fig_all.set_xlabel(charges2, fontsize=15)
     fig_all.set_ylabel(charges1, fontsize=15)
     fig_all.set_title("Correlation graph", fontsize=15)
@@ -196,10 +196,10 @@ def plotting(charges1, charges2, save_fig, fig_all, fig, pdf, rmsd, person_2, ax
     fig_all.legend()
     fig_all.text(axis_range[1], axis_range[0], "Num. of atoms: " + str(number_of_atoms) + "\nrmsd: " + str(rmsd)[:6] +
                  "\nPearson**2: " + str(person_2)[:6], ha='right', va='bottom', fontsize=15)
-    if save_fig is not None:
-        pdf.savefig(fig)
-        pdf.close()
-    plt.show()
+    if save_fig_bool is not False:
+        fig.savefig(save_fig_name)
+        plt.show()
+
 
 def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, log, force):
     if not os.path.isfile(charges1):
@@ -208,9 +208,7 @@ def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, log, 
         exit(colored("There is no charges file with name " + charges2 + "\n", "red"))
     try:
         if os.path.isfile(save_fig):
-            if force:
-                pass
-            else:
+            if not force:
                 print(colored("Warning. There is some file with have the same name like your saved picture from" +
                               " comparison!", "red"))
                 print("If you want to replace exist file, please write yes and press enter. Else press enter.")
@@ -225,9 +223,7 @@ def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, log, 
         pass
     try:
         if os.path.isfile(log):
-            if force:
-                pass
-            else:
+            if not force:
                 print(colored("Warning. There is some file with have the same name like your log file from comparison!",
                               "red"))
                 print("If you want to replace exist file, please write yes and press enter. Else press enter.")

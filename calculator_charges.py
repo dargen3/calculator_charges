@@ -2,13 +2,13 @@
 from sys import exit, stdin
 import argparse
 import argcomplete
-from numpy import linalg, sqrt, array
+from numpy import linalg, sqrt, array, concatenate
 import importlib
 from termcolor import colored
 from subprocess import call, check_call, CalledProcessError
 from scipy.optimize import minimize, basinhopping, differential_evolution
+from scipy import stats
 from matplotlib import pyplot as plt
-import matplotlib.backends.backend_pdf
 from tabulate import tabulate
 import warnings
 from modules.set_of_molecule import Set_of_molecule
@@ -16,10 +16,12 @@ import modules.func_calc as calc
 import modules.func_para as para
 import modules.func_comp as comp
 import modules.func_stat as stat
+import modules.func_html as make_html
 import logging
 from math import isnan
-
-
+from numba import jit
+from multiprocessing import Pool
+import datetime
 
 def settings_argparse():
     global args
@@ -36,7 +38,7 @@ def settings_argparse():
     parser.add_argument("--new_parameters", help="File to save parameters from parameterization.")
     parser.add_argument("--charges", help="File with charges.")
     parser.add_argument("--num_of_parameterized_mol", help="Only first N molecule will be parameterized.")
-    parser.add_argument("--save_fig", help="Save figures of comparison as pdf.")
+    parser.add_argument("--save_fig", action="store_true", help="Save figures of comparison.")
     parser.add_argument("--validation", action="store_true",
                         help="From set of molecules will be 70% used for parameterization and 30% for validation.")
     parser.add_argument("--choised_molecules", help="PRIVATE ARGUMENT!")
@@ -48,24 +50,26 @@ def settings_argparse():
                         choices=("minimize", "basinhopping", "diferential_evolution"))
     parser.add_argument("--alarm_after_para", action="store_true",
                         help="Alarm after parameterization. You need instalated bash's play!")
+    parser.add_argument("--make_html", action="store_true", help="Make html after comparison. Only for parameterization.")
     parser.add_argument("--statistic_on_end_of_para",
                         help="PRIVATE ARGUMENT! Statistics data from para. is added to end of parameters file.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity.")
-    parser.add_argument("-f", "--rewriting_with_force", action="store_true", help="All existed files with the same names like your outputs will be replaced.")
+    parser.add_argument("-f", "--rewriting_with_force", action="store_true",
+                        help="All existed files with the same names like your outputs will be replaced.")
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     if args.mode == "calculation":
         if args.method is None or args.sdf_input is None or args.parameters is None or args.chg_output is None:
             parser.error("For calculation must be choisen --method, --sdf_input, --parameters and --chg_output!")
-    if args.mode == "parameterization":
+    elif args.mode == "parameterization":
         if args.right_charges is None or args.method is None or args.sdf_input is None or args.parameters is None or \
                         args.new_parameters is None or args.chg_output is None:
             parser.error("For parameterization must be choisen --right_charges, --method, --sdf_input, " +
                          "--parameters, --chg_output and --new_parameters!")
-    if args.mode == "comparison":
+    elif args.mode == "comparison":
         if args.charges is None or args.right_charges is None:
             parser.error("For comparison must be choisen --charges and --right_charges!")
-    if args.mode == "statistics":
+    elif args.mode == "statistics":
         if args.charges is None or args.sdf_input is None:
             parser.error("For statistics must be choisen --charges and --sdf_input")
     if args.verbose:
@@ -74,7 +78,7 @@ def settings_argparse():
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
         logger.addHandler(ch)
-    if args.verbose is False:
+    else:
         logger = logging.getLogger()
         logger.setLevel(logging.ERROR)
         ch = logging.StreamHandler()
@@ -88,6 +92,7 @@ def settings_argparse():
         print("\n\n")
 
 
+@jit(nopython=True)
 def statistics(deviation_list):
     rmsd_list = []
     abs_dev = 0
@@ -99,32 +104,97 @@ def statistics(deviation_list):
     return rmsd_list, abs_dev
 
 
-def calculating_charges(list_of_parameters):
-    method.load_parameters_from_list(list_of_parameters)
+def molecule_calculate(molecules):
+    """
+    if args.method[0:2] == "SA":
+        result = method.calculate(molecule, method.get_parameterized_atom_type)
+    else:
+        result = method.calculate(molecule)
+    return result
+    """
     list_with_results = []
-    for mol in set_of_molecule:
-        try:
-            if args.method[0:2] == "SA":
-                result = method.calculate(mol, method.get_parameterized_atom_type)
-            else:
-                result = method.calculate(mol)
-        except linalg.linalg.LinAlgError:
-            continue
+    for molecule in molecules:
+        if args.method[0:2] == "SA":
+            result = method.calculate(molecule, method.get_parameterized_atom_type)
+        else:
+            result = method.calculate(molecule)
         list_with_results.extend(result)
+    return list_with_results
+
+def split_list(arr, size):
+    arrs = []
+    while len(arr) > size:
+        pice = arr[:size]
+        arrs.append(pice)
+        arr = arr[size:]
+    arrs.append(arr)
+    return arrs
+
+
+def calculating_charges(list_of_parameters):
+
+    method.load_parameters_from_list(list_of_parameters)
+    """
+    result = pool.map(molecule_calculate, split_list(set_of_molecule, int(len(set_of_molecule)/2) + 1))
+    list_with_results = list(concatenate(result))
+    """
+    list_with_results = []
+    for molecule in set_of_molecule:
+        if args.method[0:2] == "SA":
+            result = method.calculate(molecule, method.get_parameterized_atom_type)
+        else:
+            result = method.calculate(molecule)
+        list_with_results.extend(result)
+
+    greater_rmsd = False
     if method.get_parameterized_atom_type is False:
-        # pearson2 = stats.pearsonr(list_with_results, method.right_charges_for_parametrization)[0]**2
+        pearson2 = stats.pearsonr(list_with_results, method.right_charges_for_parametrization[:len(list_with_results)])[
+                       0] ** 2
         deviation_list = zip(list_with_results, method.right_charges_for_parametrization)
+        atomic_types = sorted(method.atomic_types)
+        dict_with_right_charges_by_atom_type = {}
+        for atom in atomic_types:
+            dict_with_right_charges_by_atom_type[str(atom)] = []
+        all_atomic_types = method.all_atomic_types
+        for x, result in enumerate(list_with_results):
+            dict_with_right_charges_by_atom_type[all_atomic_types[x]].append(result)
+        statistic_list_rmsd = [0] * len(atomic_types)
+        statistic_list_pear = [0] * len(atomic_types)
+        statistic_list_absd = [0] * len(atomic_types)
+        for atom in atomic_types:
+            deviation_list_at = zip(dict_with_right_charges_by_atom_type[atom],
+                                    method.right_charges_for_parameterization_by_atom_types(atom))
+            rmsd_list_at, abs_dev_at = statistics(list(deviation_list_at))
+            statistic_list_rmsd[atomic_types.index(atom)] = sqrt((1.0 / len(rmsd_list_at)) * sum(rmsd_list_at))
+            statistic_list_pear[atomic_types.index(atom)] = stats.pearsonr(dict_with_right_charges_by_atom_type[atom],
+                                                                           method.right_charges_for_parameterization_by_atom_types(
+                                                                               atom)[:len(
+                                                                               dict_with_right_charges_by_atom_type[
+                                                                                   atom])])[0] ** 2
+            statistic_list_absd[atomic_types.index(atom)] = abs_dev_at
+            greater_rmsd = max(statistic_list_rmsd)
     else:
         deviation_list = zip(list_with_results, method.right_charges_for_parameterization_by_atom_types(
             method.get_parameterized_atom_type))
-        # pearson2 = stats.pearsonr(list_with_results, method.right_charges_for_parameterization_by_atom_types(
-        # method.get_parameterized_atom_type))[0]**2
-    rmsd_list, abs_dev = statistics(deviation_list)
+        pearson2 = stats.pearsonr(list_with_results,
+                                  method.right_charges_for_parameterization_by_atom_types(
+                                      method.get_parameterized_atom_type)[:len(list_with_results)])[0] ** 2
+    rmsd_list, abs_dev = statistics(list(deviation_list))
     rmsd = sqrt((1.0 / len(rmsd_list)) * sum(rmsd_list))
     if isnan(rmsd):
         rmsd = 1000.0
-    print("Actual RMSD: " + str(rmsd) + "     Actual max deviation: " + str(abs_dev), end="\r")
-    return rmsd + abs_dev / 10.0
+    if greater_rmsd and isnan(greater_rmsd):
+        greater_rmsd = 1000.0
+    if isnan(pearson2):
+        pearson2 = 1000.0
+    if method.get_parameterized_atom_type is False:
+        print("Actual RMSD: " + str(rmsd)[:9] + "     Actual max deviation: " + str(abs_dev)[:9] + "     Worst RMSD: " +
+              str(greater_rmsd)[:9] + "     Worst pearson**2: " + str(min(statistic_list_pear))[:9], end="\r")
+        return rmsd #(1 - min(statistic_list_pear)) + (1 - pearson2) + greater_rmsd * 10 + rmsd * 10 + sum(
+        #    statistic_list_pear) / len(statistic_list_pear) + sum(statistic_list_rmsd) / len(statistic_list_rmsd)
+    print("Actual RMSD: " + str(rmsd) + "         Actual max deviation: " + str(
+        abs_dev) + "         Actual pearson**2: " + str(pearson2), end="\r")
+    return rmsd  + abs_dev / 10.0 + (1-pearson2)
 
 
 if __name__ == "__main__":
@@ -156,12 +226,15 @@ if __name__ == "__main__":
         logger.info(colored("Loading of parameters was sucessfull.\n\n\n", "green"))
         logger.info("Calculating of charges ...")
         method.set_parameters_type()
-        method.set_getting_parameters("calculation")
         num_of_err = 0
         if args.method == "SAEFM":
             atomic_types = para.control_of_missing_atoms(setm[:number_of_molecules], method, args.parameters)
         if args.validation:
             set_of_molecule = set_of_molecule[int(args.choised_molecules):int(int(args.choised_molecules) * 1 / 0.7)]
+        sorted_atomic_types = method.parameters_keys
+        for molecule in setm[:number_of_molecules]:
+            molecule.symbol_to_number(sorted_atomic_types, method.parameters_type)
+        method.make_list_of_lists_of_parameters()
         for molecule in setm[:number_of_molecules]:
             molecule.set_length_correction(method.length_correction)
             try:
@@ -212,7 +285,6 @@ if __name__ == "__main__":
                 method.method_in_parameters) + " but you want to calculate charges by method " + str(
                 args.method) + "!\n\n\n", "red"))
         method.set_parameters_type()
-        method.set_getting_parameters("parameterization")
         logger.info(colored("Loading of parameters was sucessfull.\n\n\n", "green"))
         logger.info("Loading molecule data from " + str(args.sdf_input) + " ...")
         setm = Set_of_molecule(args.sdf_input)
@@ -226,6 +298,7 @@ if __name__ == "__main__":
             choised_num_of_mol = number_of_molecules
         if args.validation:
             choised_num_of_mol = int(choised_num_of_mol * 0.7)
+        global pool
         if args.method == "SAEFM":
             set_of_molecule = setm[:choised_num_of_mol]
             a_types = para.control_of_missing_atoms(set_of_molecule, method, args.parameters)
@@ -240,7 +313,7 @@ if __name__ == "__main__":
                                 "green"))
             global_sorted_parameters = method.set_sorted_parameters()
             logger.info("Loading charges data from " + str(args.right_charges) + " ...")
-            num_of_charges = method.load_charges_for_par_by_atom_types(args.right_charges, atomic_types)
+            method.load_charges_for_par_by_atom_types(args.right_charges, atomic_types)
             logger.info(colored("Loading of charges data was sucessfull. \n\n\n", "green"))
             logger.info(str(number_of_molecules) + " molecules was loaded.\n\n\n")
             global_input_parameters_list = method.parameters
@@ -279,34 +352,25 @@ if __name__ == "__main__":
             method.set_global_sorted_parameters_keys()
         else:
             set_of_molecule = setm[:choised_num_of_mol]
-            para.control_of_missing_atoms(set_of_molecule, method, args.parameters)
+            atomic_types = para.control_of_missing_atoms(set_of_molecule, method, args.parameters)
+            method.set_atomic_types(atomic_types)
             logger.info(colored("Loading molecule data from " + str(args.sdf_input) + " was successful.\n\n\n",
                                 "green"))
             method.set_sorted_parameters()
             logger.info("Loading charges data from " + str(args.right_charges) + " ...")
             method.load_charges_for_par(args.right_charges)
+            method.load_charges_for_par_by_atom_types(args.right_charges, atomic_types)
             logger.info(colored("Loading of charges data was sucessfull. \n\n\n", "green"))
             logger.info(str(number_of_molecules) + " molecules was loaded.\n\n\n")
             input_parameters_list = method.parameters
             if args.validation or args.start_from_ones:
                 input_parameters_list = array([1] * len(input_parameters_list))
-            bounds = [(-2, 4)] * len(input_parameters_list)
-            """
-            for x in [50, 100, 1000]:
-                if x >= choised_num_of_mol:
-                    break
-                print("Parameterization running for " + str(x) + " molecules ...")
-                set_of_molecule = setm[:x]
-                if args.method_parameterization == "basinhopping":
-                    res = basinhopping(calculating_charges, input_parameters_list, niter=1, T=0.1, stepsize=0.05)
-                elif args.method_parameterization == "diferential_evolution":
-                    res = differential_evolution(calculating_charges, bounds, maxiter=1)
-                else:
-                    res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds)
-                print("\n\n\n")
-                input_parameters_list = res.x
-            """
+            bounds = [(-5, 4)] * len(input_parameters_list)
             set_of_molecule = setm[:choised_num_of_mol]
+            sorted_atomic_types = method.parameters_keys
+            for molecule in set_of_molecule:
+                molecule.symbol_to_number(sorted_atomic_types, method.parameters_type)
+            method.make_list_of_lists_of_parameters()
             print("Parameterization running for " + str(choised_num_of_mol) + " molecules ...")
             if args.method_parameterization == "basinhopping":
                 res = basinhopping(calculating_charges, input_parameters_list, niter=1, T=0.1, stepsize=0.05)
@@ -331,9 +395,12 @@ if __name__ == "__main__":
                 " --sdf_input " + args.sdf_input + " --method " + args.method + " --chg_output " + args.chg_output
         call2 = "./calculator_charges.py --mode comparison --charges " + args.chg_output + " --right_charges " + \
                 args.right_charges + " --statistic_on_end_of_para " + args.new_parameters + " --sdf_input " + \
-                args.sdf_input + " --method_parameterization " + args.method_parameterization
+                args.sdf_input + " --method_parameterization " + args.method_parameterization + \
+                " --choised_molecules " + str(choised_num_of_mol)
         if args.validation:
             call1 += " --validation --choised_molecules " + str(choised_num_of_mol)
+        if args.make_html:
+            call2 += " --make_html --method " + str(args.method)
         if args.verbose:
             call1 += " -v"
             call2 += " -v"
@@ -341,20 +408,18 @@ if __name__ == "__main__":
             call1 += " -f"
             call2 += " -f"
         if args.save_fig:
-            call2 = call2 + " --save_fig " + args.save_fig
+            call2 = call2 + " --save_fig "
         exit_value = call(call1, shell=True)
         if exit_value == 0:
             call(call2, shell=True)
 
     elif args.mode == "comparison":
+        now = datetime.datetime.now()
         fig = plt.figure(figsize=(11, 9))
         fig_all = fig.add_subplot(111)
-        comp.control_if_arguments_files_exist_for_com(args.charges, args.right_charges, args.save_fig,
+        save_fig = args.charges[:-4] + ".png"
+        comp.control_if_arguments_files_exist_for_com(args.charges, args.right_charges, save_fig,
                                                       args.all_mol_to_log, args.rewriting_with_force)
-        if args.save_fig:
-            pdf = matplotlib.backends.backend_pdf.PdfPages(args.save_fig)
-        else:
-            pdf = None
         if args.all_mol_to_log is not None:
             with open(args.all_mol_to_log, "a") as mol_log:
                 mol_log.write("name   rmsd   max.dev.   av.dev   pearson**2\n")
@@ -379,7 +444,9 @@ if __name__ == "__main__":
                     method_par = args.method_parameterization
                 else:
                     method_par = "minimize"
-                parameters.write("Method of parameterization: " + method_par + "\n\n")
+                parameters.write("Date of parameterization: {}\n".format(now.strftime("%Y-%m-%d %H:%M")))
+                parameters.write("Method of parameterization: " + method_par)
+                parameters.write("\nNumber of parameterized molecules: " + args.choised_molecules + "\n\n")
                 parameters.write("Statistics for all atoms:\n")
                 parameters.write(tabulate(table_for_all_atoms,
                                           headers=["RMSD", "max deviation", "average deviation", "pearson**2",
@@ -397,10 +464,11 @@ if __name__ == "__main__":
                                                    "num. of molecules"]))
                 parameters.write("\n\n")
         statistics_data = []
+        atoms = sorted(atoms)
         for atom in atoms:
             statistics_data.append(comp.statistics_for_atom_type(atom, list_with_atomic_data, atoms,
                                                                  fig_all, args.charges, args.right_charges,
-                                                                 args.save_fig, pdf, axis_range))
+                                                                 args.save_fig, axis_range, save_fig[:-4]))
         print("\n\nStatistics for atomic type:")
         print(tabulate(statistics_data, headers=["atomic type", "RMSD", "max deviation", "average deviation",
                                                  "pearson**2", "num. of atoms"]))
@@ -412,9 +480,10 @@ if __name__ == "__main__":
                                                                     "num. of atoms"]))
                 parameters.write("\n\n")
         print("\n\n\n")
-        comp.plotting(args.charges, args.right_charges, args.save_fig,
-                      fig_all, fig, pdf, RMSD, pearson_2, axis_range, number_of_atoms)
-
+        comp.plotting(args.charges, args.right_charges, args.save_fig, save_fig,
+                      fig_all, fig, RMSD, pearson_2, axis_range, number_of_atoms)
+        if args.make_html:
+            make_html.make_html(args.charges[:-4], args.sdf_input, args.method, table_for_all_atoms[0], table_for_all_molecules[0], save_fig, atoms, statistics_data, now.strftime("%Y-%m-%d %H:%M"), method_par, args.choised_molecules)
     elif args.mode == "statistics":
         stat.control_if_arguments_files_exist_for_stat(args.charges, args.sdf_input)
         charges_data, sdf_data, charges_names, sdf_names, setm, number_of_lines = stat.is_the_same(args.charges,

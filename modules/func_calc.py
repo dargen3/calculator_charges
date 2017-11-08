@@ -30,9 +30,7 @@ def control_if_arguments_files_exist_for_calc(parameters, sdf_input, chg_output,
     if not os.path.isfile(sdf_input):
         exit(colored("There is no sdf file with name " + sdf_input + "\n", "red"))
     if os.path.isfile(chg_output):
-        if force:
-            pass
-        else:
+        if not force:
             print(colored("Warning. There is some file with have the same name like your chg output!", "red"))
             print("If you want to replace exist file, please write yes and press enter. Else press enter.")
             decision = stdin.readline().rstrip('\n')

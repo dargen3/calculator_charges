@@ -14,9 +14,7 @@ def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameter
     if not os.path.isfile(parameters):
         exit(colored("There is no parameters file with name " + parameters + "\n", "red"))
     if os.path.isfile(new_parameters):
-        if force:
-            pass
-        else:
+        if not force:
             print(colored("Warning. There is some file with have the same name like your new parameters file!", "red"))
             print("If you want to replace exist file, please write yes and press enter. Else press enter.")
             decision = stdin.readline().rstrip('\n')

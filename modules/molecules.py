@@ -2,7 +2,7 @@ from numpy import sqrt, array
 from .atoms import Atom
 from numba import jit
 from scipy import spatial
-
+import numpy as np
 
 @jit(nopython=True)
 def bonded_atoms(index, set_of_bonds):
@@ -39,34 +39,79 @@ class Molecule:
             atoms.append(Atom(atom))
             atoms_types.append(atom[0])
         self._atoms_types = atoms_types
-        self.atoms = atoms
+        self._atoms = atoms
         bonds = []
         bonds_types = []
         for bond in molecule[1]["bonds"]:
             bonds.append((bond[0], bond[1]))
             bonds_types.append(bond[2])
-        self.bonds = bonds
-        self.bonds_types = bonds_types
+        self._bonds = bonds
+        self._bonds_types = bonds_types
         self._total_charge = molecule[1]["total_charge"]
         list_of_atoms = [[] for _ in range(self._number_of_atoms+1)]
         list_of_all_bonds = [[] for _ in range(self._number_of_atoms+1)]
-        for x, bond in enumerate(self.bonds):
+        for x, bond in enumerate(self._bonds):
             atom1 = bond[0]
             atom2 = bond[1]
             list_of_atoms[atom1].append(atom2)
             list_of_atoms[atom2].append(atom1)
-            list_of_all_bonds[atom1].append(self.bonds_types[x])
-            list_of_all_bonds[atom2].append(self.bonds_types[x])
+            list_of_all_bonds[atom1].append(self._bonds_types[x])
+            list_of_all_bonds[atom2].append(self._bonds_types[x])
+        self._bonded_atoms = list_of_atoms
+        length = len(sorted(self._bonded_atoms[1:], key=len, reverse=True)[0])
+        self._corected_bonded_atoms = np.array([xi+[-1]*(length-len(xi)) for xi in self._bonded_atoms[1:]])
         list_of_highest_bond = []
         for x in list_of_all_bonds[1:]:
             list_of_highest_bond.append(max(x))
         list_of_highest_bond.insert(0, 0)
         self._highest_bond_of_atoms = list_of_highest_bond
-        self._bonded_atoms = list_of_atoms
-        atom_cords = array([atom.position for atom in self.atoms])
+        symbol_gravity = []
+        for x, atom in enumerate(self._atoms):
+            symbol_gravity.append(str(atom.symbol) + "~" + str(self._highest_bond_of_atoms[x+1]))
+        self._symbol_gravity = symbol_gravity
+        list_of_bonded_atoms = [[] for _ in range(self._number_of_atoms+1)]
+        for index, x in enumerate(self._bonded_atoms[1:]):
+            for y in x:
+                list_of_bonded_atoms[index+1].extend(self._bonded_atoms[y])
+            list_of_bonded_atoms[index+1] = list(set(list_of_bonded_atoms[index+1]))
+            list_of_bonded_atoms[index+1].remove(index+1)
+        self._bonded_bonded_atoms = list_of_bonded_atoms
+        length = len(sorted(self._bonded_bonded_atoms[1:], key=len, reverse=True)[0])
+        self._corected_bonded_bonded_atoms = np.array([xi+[-1]*(length-len(xi)) for xi in self._bonded_bonded_atoms[1:]])
+        atom_cords = array([atom.position for atom in self._atoms])
         self._distance_matrix = spatial.distance.cdist(atom_cords, atom_cords)
 
+    @property
+    def c_bonded_atoms(self):
+        return self._corected_bonded_atoms
 
+
+    @property
+    def c_bonded_bonded_atoms(self):
+        return self._corected_bonded_bonded_atoms
+
+
+    def symbol_gravity(self, index):
+        return self._symbol_gravity[index-1]
+
+
+    def symbol_to_number(self, atomic_types, type):
+        s_numbers = []
+        if type == "atom":
+            for atom in self._atoms_types:
+                s_numbers.append(atomic_types.index(atom))
+            self.s_numbers = s_numbers
+        elif type == "atom~high_bond":
+            for atom_gravity in self._symbol_gravity:
+                s_numbers.append(atomic_types.index(atom_gravity))
+            self.s_numbers = s_numbers
+
+
+
+
+    @property
+    def symbol_grav(self):
+        return self._symbol_gravity
 
     @property
     def highest_bond_of_atoms(self):
@@ -94,6 +139,9 @@ class Molecule:
     @property
     def bonded_atoms(self):
         return self._bonded_atoms
+    @property
+    def bonded_bonded_atoms(self):
+        return self._bonded_bonded_atoms
 
     def set_length_correction(self, correction):
         if correction == 1:
@@ -102,19 +150,19 @@ class Molecule:
             self._distance_matrix *= correction
 
     def get_atom_type_with_idx(self, index):
-        return self.atoms[index - 1].symbol
+        return self._atoms[index - 1].symbol
 
     def get_distance_between_atoms(self, index1, index2):
-        x1, y1, z1 = self.atoms[index1 - 1].position
-        x2, y2, z2 = self.atoms[index2 - 1].position
+        x1, y1, z1 = self._atoms[index1 - 1].position
+        x2, y2, z2 = self._atoms[index2 - 1].position
         return distance(x1, y1, z1, x2, y2, z2)
-
+    """
     def get_bond_type_between_atoms(self, index1, index2):
         try:
-            return self.bonds_types[bond_type(index1, index2, self.bonds)]
+            return self._bonds_types[bond_type(index1, index2, self._bonds)]
         except TypeError:
             pass
-
+    """
     def get_bonded_atoms(self, index):
-        return bonded_atoms(index, self.bonds)
+        return bonded_atoms(index, self._bonds)
 
