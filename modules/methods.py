@@ -13,12 +13,6 @@ class Arciclass:
     def method_in_parameters(self):
         return self._parameters_method
 
-    @property
-    def get_parameterized_atom_type(self):
-        try:
-            return self._parametrized_atom_type
-        except:
-            return False
 
     @property
     def right_charges_for_parametrization(self):
@@ -96,24 +90,21 @@ class Arciclass:
             self._parameters_method, self.parameters_atoms, self.parameters_type, self.parameters_pattern, \
             self._length_correction, self.parameters = method, parameters_atoms, parameters_type[1:], pattern, \
                                                        length_correction, parameters
-            self.pernament_parameters = parameters
 
+    @property
     def set_sorted_parameters(self):
         list_of_parameters = []
         list_of_keys = []
         for key in sorted(self.parameters):
             list_of_parameters.append(self.parameters[key])
             list_of_keys.append(key)
-        self.parameters = list_of_parameters
+        self._sorted_parameters_values = list_of_parameters
         self.sorted_parameters_keys = list_of_keys
-        self.global_sorted_parameters_keys = list_of_keys
         return self.sorted_parameters_keys
 
-    def set_sorted_parameters_keys_for_atom_type(self, keys):
-        self.sorted_parameters_keys = keys
-
-    def set_global_sorted_parameters_keys(self):
-        self.sorted_parameters_keys = self.global_sorted_parameters_keys
+    @property
+    def sorted_parameters_values(self):
+        return self._sorted_parameters_values
 
     def load_parameters_from_list(self, list_p):
         self.parameters = dict(zip(self.sorted_parameters_keys, list_p))
@@ -129,25 +120,6 @@ class Arciclass:
                     list_with_right_charges.append(float(l[2]))
         self._list_with_right_charges = list_with_right_charges
 
-    def load_calculated_charges_for_par_with_molecules(self, file):
-        with open(file, "r") as right_charges_file:
-            list_with_right_charges = []
-            molecules_charges = []
-            for line in right_charges_file:
-                l = line.split()
-                if len(l) not in {0, 1, 3}:
-                    exit(colored("File " + file + " with right charges is wrong! \n", "red"))
-                if len(l) == 3:
-                    molecules_charges.append(float(l[2]))
-                if len(l) == 0:
-                    list_with_right_charges.append(molecules_charges)
-                    molecules_charges = []
-            if list_with_right_charges == [] or set(molecules_charges) != list_with_right_charges[-1]:
-                list_with_right_charges.append(molecules_charges)
-        self.list_with_calculated_charges_by_molecule = list_with_right_charges
-
-    def get_list_with_calculated_charges_by_molecule(self, index):
-        return self.list_with_calculated_charges_by_molecule[index]
 
     def set_atomic_types(self, atomic_types):
         self._atomic_types = atomic_types
@@ -185,15 +157,13 @@ class Arciclass:
         except:
             return False
 
-    def set_parameterized_atom_type(self, atom_type):
-        self._parametrized_atom_type = atom_type
+
 
     def get_key_in_parameters_gravity(self, i, molecule):
         return molecule.symbol_gravity(i)
 
     def get_key_in_parameters_atom(self, i, molecule):
         return molecule.get_atom_type_with_idx(i)
-
 
     def set_parameters_type(self):
         if self.parameters_type == "atom~high_bond":
@@ -207,13 +177,12 @@ class Arciclass:
 
     def make_list_of_lists_of_parameters(self):
         l_of_l = [[] for i in range(len(self.parameters_keys))]
-        for x in sorted(self.pernament_parameters):
+        for x in sorted(self.parameters):
             if x[0].isupper():
                 for y in self.parameters_keys:
                     if y == x[:len(y)]:
-                        l_of_l[self.parameters_keys.index(y)].append(self.pernament_parameters[x])
-        self.list_of_lists_of_parameters = np.array(l_of_l)
-
+                        l_of_l[self.parameters_keys.index(y)].append(self.parameters[x])
+        self.list_of_lists_of_parameters = np.array(l_of_l, dtype=np.float64)
 
 @jit(nopython=True, nogil=True, cache=True)
 def EEM_calculate(num_of_atoms, kappa, matrix_of_distance, parameters_values, parameters_keys, formal_charge):
@@ -252,33 +221,43 @@ class EEM(Arciclass):
         results = np.linalg.solve(matrix, vector)
         return results[:-1]
 
+@jit(nopython=True, nogil=True, cache=True)
+def SFKEEM_calculate(num_of_atoms, sigma, parameters_values, parameters_keys, matrix_of_distance, formal_charge):
+    matrix = np.ones((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
+    vector = np.empty(num_of_atoms + 1, dtype=np.float64)
+    for x in range(num_of_atoms):
+        symbol = parameters_keys[x]
+        value = parameters_values[symbol][1]
+        matrix[x, :-1] = matrix[x, :-1] * value
+        matrix[:-1, x] = matrix[:-1, x] * value
+        vector[x] = - parameters_values[symbol][0]
+    matrix[:num_of_atoms, :num_of_atoms] = 2.0 * np.sqrt(matrix[:num_of_atoms, :num_of_atoms]) * (1/np.cosh(matrix_of_distance * sigma))
+    vector[-1] = formal_charge
+    matrix[num_of_atoms, num_of_atoms] = 0.0
+    results = np.linalg.solve(matrix, vector)
+    return results[:-1]
 
-@jit(nopython=True)
-def sfkeem_formula(dist, p1, p2, sigma):
-    return 2.0 * np.sqrt(p1 * p2) * (1.0 / np.cosh(dist * sigma))
 
 
 class SFKEEM(Arciclass):
     def calculate(self, molecule):
+        return SFKEEM_calculate(len(molecule), self.get_parameter("sigma"), self.list_of_lists_of_parameters, molecule.s_numbers, molecule.matrix_of_distance, molecule.formal_charge)
+
+    def calculate_slow(self, molecule):
         num_of_atoms = len(molecule)
-        matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=float)
-        vector = np.empty(shape=[num_of_atoms + 1], dtype=float)
-        matrix[:num_of_atoms, :num_of_atoms] = molecule.matrix_of_distance
-        matrix[num_of_atoms, :] = 1.0
-        matrix[:, num_of_atoms] = 1.0
-        matrix[num_of_atoms, num_of_atoms] = 0.0
-        list_with_parameters = []
-        for i in range(1, num_of_atoms + 1):
-            symbol = self.symbol(i, molecule)
-            list_with_parameters.append(self.get_parameter(symbol + "~beta"))
-            vector[i - 1] = -(self.get_parameter(symbol + "~alfa"))
+        matrix = np.ones((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
+        vector = np.empty(num_of_atoms + 1, dtype=np.float64)
+        for x in range(num_of_atoms):
+            symbol = self.symbol(x+1, molecule)
+            value = self.get_parameter(symbol + "~beta")
+            matrix[x, :-1] = matrix[x, :-1] * value
+            matrix[:-1, x] = matrix[:-1, x] * value
+            vector[x] = - self.get_parameter(symbol + "~alfa")
         sigma = self.get_parameter("sigma")
-        for i in range(num_of_atoms):
-            matrix[i][i] = list_with_parameters[i] * 2
-            for j in range(i + 1, num_of_atoms):
-                matrix[i][j] = matrix[j][i] = sfkeem_formula(matrix[i][j], list_with_parameters[i],
-                                                             list_with_parameters[j], sigma)
+        matrix[:num_of_atoms, :num_of_atoms] = 2.0 * np.sqrt(matrix[:num_of_atoms, :num_of_atoms]) * (
+        1 / np.cosh(molecule.matrix_of_distance * sigma))
         vector[-1] = molecule.formal_charge
+        matrix[num_of_atoms, num_of_atoms] = 0.0
         results = np.linalg.solve(matrix, vector)
         return results[:-1]
 
@@ -288,8 +267,36 @@ def coulomb_integral(cor, rad_1, rad_2, distance):
     return cor * erf(np.sqrt(rad_1 * rad_2 / (rad_1 + rad_2)) * distance) / distance
 
 
+@jit(nopython=True, nogil=True, cache=True)
+def QEq_calculate(num_of_atoms, matrix_of_distance, parameters_keys, parameters_values, correlation, formal_charge):
+    matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
+    vector = np.empty(num_of_atoms + 1, dtype=np.float64)
+    matrix[:num_of_atoms, :num_of_atoms] = matrix_of_distance
+    matrix[num_of_atoms, :] = 1.0
+    matrix[:, num_of_atoms] = 1.0
+    matrix[num_of_atoms, num_of_atoms] = 0.0
+    vector_rad = np.empty(num_of_atoms, dtype=np.float64)
+    for x in range(num_of_atoms):
+        vector_rad[x] = parameters_values[parameters_keys[x]][2]
+    for i in range(num_of_atoms):
+        symbol = parameters_keys[i]
+        matrix[i][i] = parameters_values[symbol][1]
+        vector[i] = -parameters_values[symbol][0]
+        for j in range(i + 1, num_of_atoms):
+            rad1 = vector_rad[i]
+            rad2 = vector_rad[j]
+            distance = matrix_of_distance[i][j]
+            matrix[i][j] = matrix[j][i] = correlation * erf(np.sqrt(rad1 * rad2 /(rad1 + rad2)) * distance) / distance
+    vector[-1] = formal_charge
+    results = np.linalg.solve(matrix, vector)
+    return results[:-1]
+
 class QEq(Arciclass):
     def calculate(self, molecule):
+        return QEq_calculate(len(molecule), molecule.matrix_of_distance, molecule.s_numbers, self.list_of_lists_of_parameters, self.get_parameter("correlation"), molecule.formal_charge)
+
+
+    def calculate_slow(self, molecule):
         num_of_atoms = len(molecule)
         matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=float)
         vector = np.empty(shape=[num_of_atoms + 1], dtype=float)
@@ -313,40 +320,6 @@ class QEq(Arciclass):
 
 
 
-class QEqr(Arciclass):
-    def calculate(self, molecule):
-        num_of_atoms = len(molecule)
-        matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=float)
-        vector = np.empty(shape=[num_of_atoms + 1], dtype=float)
-        matrix[:num_of_atoms, :num_of_atoms] = 1.0/molecule.matrix_of_distance
-        matrix[num_of_atoms, :] = 1.0
-        matrix[:, num_of_atoms] = 1.0
-        matrix[num_of_atoms, num_of_atoms] = 0.0
-        correlation = self.get_parameter("correlation")
-        rad = []
-        for x in range(1, num_of_atoms + 1):
-            rad.append(self.get_parameter(self.symbol(x, molecule) + "~radius"))
-        for i in range(num_of_atoms):
-            symbol = self.symbol(i + 1, molecule)
-            matrix[i][i] = self.get_parameter(symbol + "~hardness")
-            vector[i] = -self.get_parameter(symbol + "~electronegativity")
-            bonded_atoms = molecule.bonded_atoms[i+1]
-            for j in bonded_atoms:
-                matrix[i][j-1] = matrix[j-1][i] = coulomb_integral(correlation, rad[i], rad[j-1], matrix[i][j-1])
-
-            bonded_bonded_atoms = molecule.bonded_bonded_atoms[i+1]
-            for x in bonded_bonded_atoms:
-                matrix[i][x - 1] = matrix[x - 1][i] = coulomb_integral(correlation, rad[i], rad[x - 1],
-                                                                           matrix[i][x - 1])
-
-        vector[-1] = molecule.formal_charge
-        results = np.linalg.solve(matrix, vector)
-        return results[:-1]
-
-
-
-
-
 def final(results):
     try:
         end_core = sum(results) / len(results)
@@ -356,35 +329,9 @@ def final(results):
     except ZeroDivisionError:
         return results
 
-
-class SAEFM(Arciclass):
-    def calculate(self, molecule, atomic_type):
-        num_of_atoms = len(molecule)
-        results = []
-        for i in range(1, num_of_atoms + 1):
-            symbol = self.symbol(i, molecule)
-            if type(atomic_type) == str and symbol == atomic_type or type(atomic_type) == list and \
-                            symbol in atomic_type:
-                bonded_atoms_elektronegativity = []
-                bonded_atoms = molecule.bonded_atoms[i]
-                bonded_atoms_elektronegativity_2 = []
-                for atom in bonded_atoms:
-                    bonded_atoms_elektronegativity.append(self.get_parameter(symbol + "~" +
-                                                                             self.symbol(atom, molecule)))
-                bonded_bonded_atoms = molecule.bonded_bonded_atoms[i]
-                for aatom in bonded_bonded_atoms:
-                    bonded_atoms_elektronegativity_2.append(
-                        self.get_parameter(symbol + "~" + self.symbol(aatom, molecule) + "-2"))
-                charge = (sum(bonded_atoms_elektronegativity) + sum(bonded_atoms_elektronegativity_2) -
-                           (self.get_parameter(symbol + "~" + symbol) +
-                            (self.get_parameter(symbol + "~" + str(molecule.highest_bond_of_atoms[i]))))) / len(bonded_atoms_elektronegativity)
-                results.append(charge)
-        if type(atomic_type) == list:
-            return final(results)
-        return results
-
 @jit(nopython=True, nogil=True, cache=True)
-def GDSM_calculate(num_of_atoms, parameters_values, parameters_keys, bonded_atoms, bonded_bonded_atoms, results):
+def SAEFM_calculate(num_of_atoms, parameters_values, parameters_keys, bonded_atoms, bonded_bonded_atoms):
+    results = np.array([0.0 for x in range(num_of_atoms)])
     for i in range(1, num_of_atoms + 1):
         bonded_atoms_elektronegativity = 0
         symbol_i = parameters_keys[i-1]
@@ -398,57 +345,51 @@ def GDSM_calculate(num_of_atoms, parameters_values, parameters_keys, bonded_atom
                 break
             symbol_aatom = parameters_keys[aatom-1]
             bonded_atoms_elektronegativity += parameters_values[symbol_aatom][1]
-        charge = bonded_atoms_elektronegativity * parameters_values[symbol_i][3] - parameters_values[symbol_i][2]
+        charge = bonded_atoms_elektronegativity * (parameters_values[symbol_i][2] + parameters_values[symbol_i][4]) - parameters_values[symbol_i][2]
         results[i-1] = charge
-    end_core = np.sum(results) / len(results)
-    for x in range(len(results)):
-        results[x] -= end_core
-    return results
+    re = np.array([0.0 for x in range(num_of_atoms)])
+    for i in range(1, num_of_atoms + 1):
+        rec = 0
+        for atom in bonded_atoms[i-1]:
+            if atom == -1:
+                break
+            symbol_atom = parameters_keys[atom-1]
+            rec += parameters_values[symbol_atom][4] * results[atom - 1]
+        re[i-1] = rec + results[i - 1]
+    end_core = np.sum(re) / len(re)
+    for x in range(len(re)):
+        re[x] -= end_core
+    return re
 
+class SAEFM(Arciclass):
+    def calculate(self, molecule):
+        num_of_atom = len(molecule)
+        return SAEFM_calculate(num_of_atom, self.list_of_lists_of_parameters, molecule.s_numbers, molecule.c_bonded_atoms, molecule.c_bonded_bonded_atoms)
 
-
-
-class GDSM(Arciclass):
-    def calculatee(self, molecule):
-        num_of_mol = len(molecule)
-        results = np.array([0.0 for x in range(num_of_mol)])
-        return GDSM_calculate(num_of_mol, self.list_of_lists_of_parameters, molecule.s_numbers, molecule.c_bonded_atoms, molecule.c_bonded_bonded_atoms, results)
-
-
-    def calculatee(self, molecule):
+    def calculate_slow(self, molecule):
         num_of_atoms = len(molecule)
         results = []
         for i in range(1, num_of_atoms + 1):
             symbol_i = self.symbol(i, molecule)
-            bonded_atoms_elektronegativity = []
+            bonded_atoms_elektronegativity = 0
             bonded_atoms = molecule.bonded_atoms[i]
             for atom in bonded_atoms:
                 symbol_atom = self.symbol(atom, molecule)
-                bonded_atoms_elektronegativity.append(self.get_parameter(symbol_atom + "~1"))
+                bonded_atoms_elektronegativity += self.get_parameter(symbol_atom + "~1")
             bonded_bonded_atoms = molecule.bonded_bonded_atoms[i]
             for aatom in bonded_bonded_atoms:
                 symbol_aatom = self.symbol(aatom, molecule)
-                bonded_atoms_elektronegativity.append(self.get_parameter(symbol_aatom + "~2"))
-            charge = sum(bonded_atoms_elektronegativity) * self.get_parameter(symbol_i + "~4") - self.get_parameter(symbol_i + "~3")
+                bonded_atoms_elektronegativity += self.get_parameter(symbol_aatom + "~2")
+            charge = bonded_atoms_elektronegativity * self.get_parameter(symbol_i + "~4") - self.get_parameter(
+                symbol_i + "~3")
             results.append(charge)
-        print(results)
-        exit()
-        return final(results)
-        """
-        re = results
+        re = []
         for i in range(1, num_of_atoms + 1):
-            symbol_i = self.symbol(i, molecule)
+            rec = 0
             bonded_atoms = molecule.bonded_atoms[i]
             for atom in bonded_atoms:
-                symbol_x = self.symbol(atom, molecule)
-                diff = abs((results[i - 1] - results[atom - 1]) * (self.get_parameter(symbol_i + "~5") -
-                                                                   self.get_parameter(symbol_x + "~5")))
-                if re[i - 1] > re[atom - 1]:
-                    re[i - 1] = re[i - 1] - diff
-                else:
-                    re[i - 1] = re[i - 1] + diff
-
+                symbol_atom = self.symbol(atom, molecule)
+                rec += self.get_parameter(symbol_atom + "~5") * results[atom-1]
+            re.append(rec + results[i-1])
         return final(re)
-        """
-
 

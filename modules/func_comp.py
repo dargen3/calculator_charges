@@ -33,6 +33,35 @@ def making_dictionary_with_charges(file_with_charges):
             charges_data[name] = list_with_mol_data
     return charges_data
 
+def making_dictionary_with_charges_para(file_with_charges, atomic_types):
+    charges_data = {}
+    with open(file_with_charges, "r+") as charges:
+        number_of_lines = len(charges.readlines())
+        number_of_actual_lines = 0
+        charges.seek(0)
+        number_of_types = 0
+        while number_of_actual_lines < number_of_lines:
+            list_with_mol_data = []
+            line = charges.readline()
+            number_of_actual_lines += 1
+            name = line.split()[0]
+            line = charges.readline()
+            number_of_actual_lines += 1
+            number = int(line.split()[0])
+            actual_number = 0
+            while actual_number < number:
+                line = charges.readline()
+                number_of_actual_lines += 1
+                actual_number += 1
+                list_with_mol_data.append(tuple([atomic_types[number_of_types], line.split()[2]]))
+                number_of_types += 1
+            if number_of_actual_lines != number_of_lines:
+                charges.readline()
+                number_of_actual_lines += 1
+            charges_data[name] = list_with_mol_data
+    return charges_data
+
+
 
 def making_final_list(dict_with_charges1, dict_with_charges2):
     dict_with_names1 = dict_with_charges1.keys()
@@ -65,16 +94,17 @@ def making_final_list(dict_with_charges1, dict_with_charges2):
                                   float(dict_with_charges2[name][x][1])))
         final_dict_with_mol[name] = list_with_mol
     set_of_atoms = set(list_of_atoms)
-    return final_list, final_dict_with_mol, tuple(set_of_atoms)
+    final_dict_with_atoms = {}
+    for x in set_of_atoms:
+        final_dict_with_atoms[x] = []
+    for x in final_list:
+        final_dict_with_atoms[x[0]].append(x)
+    return final_list, final_dict_with_atoms, final_dict_with_mol, tuple(set_of_atoms)
 
 
-def statistics_for_atom_type(atomic_symbol, list_with_data, atoms, fig_all, charges1, charges2, save_fig,
+def statistics_for_atom_type(atomic_symbol, list_with_atomic_data, atoms, fig_all, charges1, charges2, save_fig,
                              axis_range, name_of_all_set):
     try:
-        list_with_atomic_data = []
-        for atom in list_with_data:
-            if atom[0] == atomic_symbol:
-                list_with_atomic_data.append(atom)
         list_for_rmsd = []
         for atom in list_with_atomic_data:
             list_for_rmsd.append((atom[1]-atom[2])**2)
@@ -96,8 +126,8 @@ def statistics_for_atom_type(atomic_symbol, list_with_data, atoms, fig_all, char
         fig_x = plt.figure(atomic_symbol, figsize=(11, 9))
         figx = fig_x.add_subplot(111, rasterized=True)
         figx.set_title(atomic_symbol)
-        figx.set_xlabel(charges1, fontsize=15)
-        figx.set_ylabel(charges2, fontsize=15)
+        figx.set_xlabel(charges2, fontsize=15)
+        figx.set_ylabel(charges1, fontsize=15)
         figx.set_xlim(axis_range)
         figx.set_ylim(axis_range)
         m, b = polyfit(list_with_charges1, list_with_charges2, 1)
@@ -116,7 +146,6 @@ def statistics_for_atom_type(atomic_symbol, list_with_data, atoms, fig_all, char
     fig_all.scatter(list_with_charges1, list_with_charges2, marker=".", color=colors[atoms.index(atomic_symbol)],
                     label=atomic_symbol)
     return [atomic_symbol, rmsd, max_deviation, average_deviation, person_2, len(list_with_atomic_data)]
-
 
 def statistics_for_all_atoms(list_with_data, fitting=False):
     list_for_rmsd = []
@@ -201,13 +230,13 @@ def plotting(charges1, charges2, save_fig_bool, save_fig_name, fig_all, fig, rms
         plt.show()
 
 
-def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, log, force):
+def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, save_fig_true, log, force):
     if not os.path.isfile(charges1):
         exit(colored("There is no charges file with name " + charges1 + "\n", "red"))
     if not os.path.isfile(charges2):
         exit(colored("There is no charges file with name " + charges2 + "\n", "red"))
     try:
-        if os.path.isfile(save_fig):
+        if os.path.isfile(save_fig) and save_fig_true:
             if not force:
                 print(colored("Warning. There is some file with have the same name like your saved picture from" +
                               " comparison!", "red"))

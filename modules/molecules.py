@@ -95,6 +95,12 @@ class Molecule:
         return self._symbol_gravity[index-1]
 
 
+    def contain_atom(self, atom_type):
+        if atom_type in self._atoms_types:
+            return True
+        return False
+
+
     def symbol_to_number(self, atomic_types, type):
         s_numbers = []
         if type == "atom":
@@ -106,8 +112,11 @@ class Molecule:
                 s_numbers.append(atomic_types.index(atom_gravity))
             self.s_numbers = s_numbers
 
-
-
+    def symbols(self, type):
+        if type == "atom":
+            return self._atoms_types
+        elif type == "atom~high_bond":
+            return self._symbol_gravity
 
     @property
     def symbol_grav(self):

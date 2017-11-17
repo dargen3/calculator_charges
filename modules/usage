@@ -1,0 +1,19 @@
+/calculator_charges.py --mode parameterization --parameters parameters/par_EFM_best.txt --sdf_input structures/set01.sdf --right_charges charges/set01.chg --method EFM --new_parameters parameters/par_pok11111 --chg_output naboje_smazat --comparison_after_par --save_fig obrazek -v
+
+all global parameters must begin by small letter
+
+
+
+pseudocode of optimalization:
+
+take so much molecules from sdf, so that running time for diferential evolution was real for you (usualy 30-50 molecules)
+run diferential evolution
+write new parameters
+while results are satisfactory:
+	take twice greater number of molecules than previous
+	run minimize with previous parameters
+(if results are good:
+	write an article!
+else:
+	cry and try it again)
+	

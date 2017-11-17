@@ -38,5 +38,4 @@ def control_if_arguments_files_exist_for_calc(parameters, sdf_input, chg_output,
                 os.remove(chg_output)
                 print(colored("Exist file was removed.\n\n\n", "green"))
             else:
-                print("\n\n")
-                exit(1)
+                exit("\n")

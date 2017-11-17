@@ -2,11 +2,14 @@ import os.path
 from termcolor import colored
 from sys import stdin
 from subprocess import call
-from os import getcwd, rename
+from os import getcwd, rename, remove
 from tempfile import NamedTemporaryFile
+from tabulate import tabulate
 
 
-def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters, new_parameters, force):
+
+
+def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters, new_parameters, force, chg_output):
     if not os.path.isfile(right_charges):
         exit(colored("There is no charges file with name " + right_charges + "\n", "red"))
     if not os.path.isfile(sdf_input):
@@ -22,6 +25,19 @@ def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameter
                 print(colored("Exist file will be replaced.\n\n\n", "green"))
             else:
                 exit("\n")
+    if os.path.isfile(chg_output):
+        if not force:
+            print(colored("Warning. There is some file with have the same name like your chg output!", "red"))
+            print("If you want to replace exist file, please write yes and press enter. Else press enter.")
+            decision = stdin.readline().rstrip('\n')
+            if decision == "yes":
+                os.remove(chg_output)
+                print(colored("Exist file was removed.\n\n\n", "green"))
+            else:
+                print("\n\n")
+                exit("\n")
+        else:
+            os.remove(chg_output)
 
 
 def control_of_missing_atoms(set_of_molecule, method, parameters):
@@ -92,4 +108,31 @@ def writing_new_parameters(parameters, new_parameters_file, res, method):
                 new_parameters.write("\n")
             new_parameters.write("<<end>>\n\n")
     rename(random_filename.name, new_parameters_file)
+
+def write_to_para(parameters, sdf_input, method_par, choised_num_of_mol, table_for_all_atoms, table_for_all_molecules, statistics_data, now, validation):
+    with open(parameters, "a") as parameters:
+        parameters.write("\n\n\nParameterized set of molecules: " + sdf_input + "\n")
+        parameters.write("Date of parameterization: {}\n".format(now.strftime("%Y-%m-%d %H:%M")))
+        parameters.write("Method of parameterization: " + method_par)
+        parameters.write("\nNumber of parameterized molecules: " + str(choised_num_of_mol) + "\n")
+        if validation:
+            parameters.write("Mode: Validation 70:30\n\n")
+        else:
+            parameters.write("Mode: Full set parameterization")
+        parameters.write("Statistics for all atoms:\n")
+        parameters.write(tabulate(table_for_all_atoms,
+                                  headers=["RMSD", "max deviation", "average deviation", "pearson**2",
+                                           "num. of atoms"]))
+        parameters.write("\n\n")
+        parameters.write("Statistics for molecules:\n")
+        parameters.write(tabulate(table_for_all_molecules,
+                                  headers=["RMSD", "max deviation", "average deviation", "pearson**2",
+                                           "num. of molecules"]))
+        parameters.write("\n\n")
+        parameters.write("Statistics for atomic type:\n")
+        parameters.write(tabulate(statistics_data, headers=["atomic type", "RMSD", "max deviation",
+                                                            "average deviation", "pearson**2",
+                                                            "num. of atoms"]))
+        parameters.write("\n\n")
+
 
