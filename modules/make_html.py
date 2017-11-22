@@ -1,9 +1,10 @@
-from subprocess import check_output
+from glob import glob
 from os import system
 from termcolor import colored
 
 
-def make_html(name, sdf, method, all_atoms, all_molecules, fig_all, atomic_types, atomic_types_data, time, method_para, num_of_par_mol, validation):
+def make_html(name, sdf, method, all_atoms, all_molecules, fig_all, atomic_types, atomic_types_data, time, method_para,
+              num_of_par_mol, validation):
     name = name + ".html"
     with open(name, "w") as html_file:
         html_file.write("<h1>Method: {0}</h1>\n".format(method))
@@ -15,7 +16,6 @@ def make_html(name, sdf, method, all_atoms, all_molecules, fig_all, atomic_types
             html_file.write("<h1>Mode: Validation 70:30</h1>\n")
         else:
             html_file.write("<h1>Mode: Full set parameterization</h1>\n")
-        #atoms
         html_file.write("<h2>Atoms:</h2>\n")
         html_file.write("<table border=1>\n")
         html_file.write("<tbody>\n")
@@ -34,7 +34,6 @@ def make_html(name, sdf, method, all_atoms, all_molecules, fig_all, atomic_types
         html_file.write("</tr>\n")
         html_file.write("<tbody>\n")
         html_file.write("</table>\n")
-        #molecules
         html_file.write("<h2>Molecules:</h2>\n")
         html_file.write("<table border=1>\n")
         html_file.write("<tbody>\n")
@@ -115,15 +114,14 @@ def make_complete_html(verbose):
     with open("data/index.html", "w") as html_file:
         html_file.write("<h1>Charges method data</h1>\n")
         html_file.write("<a href = \"data\">All data</a>\n<br />\n")
-        files = check_output("find data/*/*/*.html" , shell=True).split()
+        files = glob("data/*/*/*.html")
         methods = {}
         for file in files:
-            splitted_path = str(file)[2:-1].split("/")
+            splitted_path = file.split("/")
             method = splitted_path[1]
             if method not in methods:
                 methods[method] = []
             methods[method].append(splitted_path)
-        print(methods)
         for method in methods:
             html_file.write("<h2>{}</h2>\n".format(method))
             for result in methods[method]:

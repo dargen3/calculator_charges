@@ -1,6 +1,7 @@
 from .molecules import Molecule
 from sys import exit
 from termcolor import colored
+from tabulate import tabulate
 
 
 class Set_of_molecule:
@@ -33,12 +34,7 @@ class Set_of_molecule:
                     list_of_bond = []
                     for x in range(number_of_bonds):
                         line = sdf_file.readline()
-                        try:
-                            type_of_bond = int(line[8])
-                        except IndexError:
-                            for x in range(10):
-                                print(colored(sdf_file.readline(), "red"))
-                            exit(colored("ERROR! Wrong type of bond. Multiplicity of bond is " + str(line[2]) + ". In molecule number: " + str(actual_mol), "red"))
+                        type_of_bond = int(line[8])
                         atom1 = int(line[:3])
                         atom2 = int(line[3:6])
                         if atom2 < atom1:
@@ -49,16 +45,13 @@ class Set_of_molecule:
                     while line != "$$$$":
                         line = sdf_file.readline().strip()
                         try:
-                            l = line.split()
-                            if l[0] == "M" and l[1] == "CHG":
-                                for x in range(5, 3 + int(l[2]) * 2, 2):
-                                    charge = charge + float(l[x - 1])
+                            ls = line.split()
+                            if ls[0] == "M" and ls[1] == "CHG":
+                                for x in range(5, 3 + int(ls[2]) * 2, 2):
+                                    charge = charge + float(ls[x - 1])
                         except IndexError:
                             pass
-                    dict_with_mol_data = {}
-                    dict_with_mol_data["atoms"] = list_of_atoms
-                    dict_with_mol_data["bonds"] = list_of_bond
-                    dict_with_mol_data["total_charge"] = charge
+                    dict_with_mol_data = {"atoms": list_of_atoms, "bonds": list_of_bond, "total_charge": charge}
                     list_with_all_molecules.append(Molecule((name, dict_with_mol_data)))
                     actual_mol += 1
                 elif str(line[-5]) == "3":
@@ -82,7 +75,8 @@ class Set_of_molecule:
                         except IndexError:
                             for x in range(10):
                                 print(colored(sdf_file.readline(), "red"))
-                            exit(colored("ERROR! Wrong type of bond. Multiplicity of bond is " + str(line[2]) + ". In molecule number: " + str(actual_mol), "red"))
+                            exit(colored("ERROR! Wrong type of bond. Multiplicity of bond is " + str(line[2]) +
+                                         ". In molecule number: " + str(actual_mol), "red"))
                         atom1 = int(line[4])
                         atom2 = int(line[5])
                         if atom2 < atom1:
@@ -92,20 +86,17 @@ class Set_of_molecule:
                     while line != "$$$$":
                         line = sdf_file.readline().strip()
                     actual_mol += 1
-                    dict_with_mol_data = {}
-                    dict_with_mol_data["atoms"] = list_of_atoms
-                    dict_with_mol_data["bonds"] = list_of_bond
-                    dict_with_mol_data["total_charge"] = charge
+                    dict_with_mol_data = {"atoms": list_of_atoms, "bonds": list_of_bond, "total_charge": charge}
                     list_with_all_molecules.append(Molecule((name, dict_with_mol_data)))
                 else:
                     for x in range(10):
                         print(colored(sdf_file.readline(), "red"))
                     exit(colored("ERROR! Sdf file is not correct!", "red"))
         self.list_with_molecules = list_with_all_molecules
+        self.file = file
 
     def __len__(self):
         return len(self.list_with_molecules)
-
 
     def __getitem__(self, index):
         return self.list_with_molecules[index]
@@ -117,7 +108,28 @@ class Set_of_molecule:
     def num_of_lines(self):
         return self._num_of_lines
 
-
+    @property
+    def statistics_data(self):
+        number_of_mol = len(self.list_with_molecules)
+        print("\n\n\nStatistics data from set of molecules from {}\n".format(self.file))
+        print("Number of molecules:   {}".format(number_of_mol))
+        atom_types = []
+        for molecule in self.list_with_molecules:
+            atom_types.extend(molecule.symbols("atom~high_bond"))
+        number_of_atoms = len(atom_types)
+        print("Number of atoms:       {}".format(number_of_atoms))
+        atom_types_counting = {}
+        for atom in atom_types:
+            if atom not in atom_types_counting:
+                atom_types_counting[atom] = 0
+            atom_types_counting[atom] += 1
+        print("Number of atoms type:  {}\n".format(len(atom_types_counting)))
+        tab_of_atoms = []
+        for atom in sorted(atom_types_counting):
+            tab_of_atoms.append((atom, atom_types_counting[atom], round(
+                atom_types_counting[atom] / (number_of_atoms / 100), 2)))
+        print(tabulate(tab_of_atoms, headers=["Type", "Number", "%"]))
+        print("\n\n\n")
 
 
 """

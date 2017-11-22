@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import os.path
 from sys import stdin
 from termcolor import colored
-
+from tabulate import tabulate
 
 
 def making_dictionary_with_charges(file_with_charges):
@@ -33,6 +33,7 @@ def making_dictionary_with_charges(file_with_charges):
             charges_data[name] = list_with_mol_data
     return charges_data
 
+
 def making_dictionary_with_charges_para(file_with_charges, atomic_types):
     charges_data = {}
     with open(file_with_charges, "r+") as charges:
@@ -60,7 +61,6 @@ def making_dictionary_with_charges_para(file_with_charges, atomic_types):
                 number_of_actual_lines += 1
             charges_data[name] = list_with_mol_data
     return charges_data
-
 
 
 def making_final_list(dict_with_charges1, dict_with_charges2):
@@ -147,6 +147,7 @@ def statistics_for_atom_type(atomic_symbol, list_with_atomic_data, atoms, fig_al
                     label=atomic_symbol)
     return [atomic_symbol, rmsd, max_deviation, average_deviation, person_2, len(list_with_atomic_data)]
 
+
 def statistics_for_all_atoms(list_with_data, fitting=False):
     list_for_rmsd = []
     if fitting:
@@ -216,7 +217,8 @@ def statistics_for_molecules(dictionary, mol_into_log):
              average(list_with_pearson_2), len(dictionary)]]
 
 
-def plotting(charges1, charges2, save_fig_bool, save_fig_name, fig_all, fig, rmsd, person_2, axis_range, number_of_atoms):
+def plotting(charges1, charges2, save_fig_bool, save_fig_name, fig_all, fig, rmsd, person_2, axis_range,
+             number_of_atoms):
     fig_all.set_xlabel(charges2, fontsize=15)
     fig_all.set_ylabel(charges1, fontsize=15)
     fig_all.set_title("Correlation graph", fontsize=15)
@@ -265,3 +267,45 @@ def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, save_
                     exit(1)
     except TypeError:
         pass
+
+
+def comparison(charges, right_charges, args_save_fig, all_mol_to_log, rewriting_with_force, logger):
+    fig = plt.figure(figsize=(11, 9))
+    fig_all = fig.add_subplot(111)
+    save_fig = charges[:-4] + ".png"
+    control_if_arguments_files_exist_for_com(charges, right_charges, save_fig, args_save_fig,
+                                             all_mol_to_log, rewriting_with_force)
+    if all_mol_to_log is not None:
+        with open(all_mol_to_log, "a") as mol_log:
+            mol_log.write("name   rmsd   max.dev.   av.dev   pearson**2\n")
+    logger.info("Loading data from {} and {} ...".format(charges, right_charges))
+    char2 = making_dictionary_with_charges(charges)
+    char1 = making_dictionary_with_charges(right_charges)
+    list_with_atomic_data, dict_with_atomic_data, dictionary_with_molecular_data, atoms = making_final_list(char1,
+                                                                                                            char2)
+    logger.info(
+        colored("Loading data from {} and {} was sucessfull.\n\n\n".format(charges, right_charges),
+                "green"))
+    print("Statistics for all atoms:")
+    table_for_all_atoms, axis_range, number_of_atoms = statistics_for_all_atoms(list_with_atomic_data,
+                                                                                fitting=True)
+    rmsd = table_for_all_atoms[0][0]
+    pearson_2 = table_for_all_atoms[0][3]
+    print(tabulate(table_for_all_atoms, headers=["RMSD", "max deviation", "average deviation", "pearson**2",
+                                                 "num. of atoms"]))
+    print("\n\nStatistics for molecules:")
+    table_for_all_molecules = statistics_for_molecules(dictionary_with_molecular_data, all_mol_to_log)
+    print(tabulate(table_for_all_molecules, headers=["RMSD", "max deviation", "average deviation", "pearson**2",
+                                                     "num. of molecules"]))
+    statistics_data = []
+    atoms = sorted(atoms)
+    for atom in atoms:
+        statistics_data.append(statistics_for_atom_type(atom, dict_with_atomic_data[atom], atoms,
+                                                        fig_all, charges, right_charges,
+                                                        args_save_fig, axis_range, save_fig[:-4]))
+    print("\n\nStatistics for atomic type:")
+    print(tabulate(statistics_data, headers=["atomic type", "RMSD", "max deviation", "average deviation",
+                                             "pearson**2", "num. of atoms"]))
+    print("\n\n\n")
+    plotting(charges, right_charges, args_save_fig, save_fig,
+             fig_all, fig, rmsd, pearson_2, axis_range, number_of_atoms)

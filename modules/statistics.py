@@ -113,3 +113,29 @@ def create_new_files(sdf_names, charges_names, sdf_input, charges, setm, number_
                 for line in charges_dict[name]:
                     new_chg_file.write(line + "\n")
                 new_chg_file.write("\n")
+
+
+def statistics(charges, sdf_input, logger):
+    control_if_arguments_files_exist_for_stat(charges, sdf_input)
+    charges_data, sdf_data, charges_names, sdf_names, setm, number_of_lines = is_the_same(charges,
+                                                                                          sdf_input,
+                                                                                          logger)
+    if charges_data == sdf_data and sdf_names == charges_names:
+        logger.info(colored("Sdf file is for the same molecules like charge file!", "green"))
+    else:
+        if charges_data == sdf_data and sdf_names != charges_names:
+            print(colored(
+                "Sdf file is for the same molecules like charge file, but molecules is in different order!\n\n\n",
+                "red"))
+        elif not (set(sdf_names) & set(charges_names)):
+            exit(colored("No together molecules for chg and sdf file.", "red"))
+        else:
+            print(colored("Sdf file is for diferent set of molecules like charges file!", "red"))
+        print(
+            "If you want to create new sdf and chg file only with together molecules write yes. Else press enter.")
+        decision = stdin.readline().rstrip('\n')
+        if decision == "yes":
+            create_new_files(sdf_names, charges_names, sdf_input, charges, setm, number_of_lines)
+            exit(colored("Cresting new files was successful!", "green"))
+        else:
+            exit("\n")

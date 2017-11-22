@@ -4,6 +4,7 @@ from numba import jit
 from scipy import spatial
 import numpy as np
 
+
 @jit(nopython=True)
 def bonded_atoms(index, set_of_bonds):
     bonded_atoms_list = []
@@ -77,7 +78,8 @@ class Molecule:
             list_of_bonded_atoms[index+1].remove(index+1)
         self._bonded_bonded_atoms = list_of_bonded_atoms
         length = len(sorted(self._bonded_bonded_atoms[1:], key=len, reverse=True)[0])
-        self._corected_bonded_bonded_atoms = np.array([xi+[-1]*(length-len(xi)) for xi in self._bonded_bonded_atoms[1:]])
+        self._corected_bonded_bonded_atoms = np.array([xi+[-1]*(length-len(xi)) for xi in
+                                                       self._bonded_bonded_atoms[1:]])
         atom_cords = array([atom.position for atom in self._atoms])
         self._distance_matrix = spatial.distance.cdist(atom_cords, atom_cords)
 
@@ -85,21 +87,17 @@ class Molecule:
     def c_bonded_atoms(self):
         return self._corected_bonded_atoms
 
-
     @property
     def c_bonded_bonded_atoms(self):
         return self._corected_bonded_bonded_atoms
 
-
     def symbol_gravity(self, index):
         return self._symbol_gravity[index-1]
-
 
     def contain_atom(self, atom_type):
         if atom_type in self._atoms_types:
             return True
         return False
-
 
     def symbol_to_number(self, atomic_types, type):
         s_numbers = []
@@ -148,6 +146,7 @@ class Molecule:
     @property
     def bonded_atoms(self):
         return self._bonded_atoms
+
     @property
     def bonded_bonded_atoms(self):
         return self._bonded_bonded_atoms
