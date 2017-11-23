@@ -108,7 +108,7 @@ class Arciclass:
     def load_parameters_from_list(self, list_p):
         self.parameters = dict(zip(self.sorted_parameters_keys, list_p))
 
-    def load_charges_for_par(self, file):
+    def load_charges_for_par(self, file, list_with_atomic_types, set_of_molecules):
         with open(file, "r") as right_charges_file:
             list_with_right_charges = []
             for line in right_charges_file:
@@ -118,6 +118,19 @@ class Arciclass:
                 if len(ls) == 3:
                     list_with_right_charges.append(float(ls[2]))
         self._list_with_right_charges = list_with_right_charges
+        all_atomic_types = []
+        for molecule in set_of_molecules:
+            all_atomic_types.extend(molecule.symbols(self.parameters_type))
+        self._all_atomic_types = all_atomic_types
+        dict_with_right_charges_by_atom_type = {}
+        atom_types_in_set = set(self._all_atomic_types)
+        for atom in atom_types_in_set:
+            dict_with_right_charges_by_atom_type[str(atom)] = []
+        for index, charge in enumerate(self._list_with_right_charges):
+            dict_with_right_charges_by_atom_type[self._all_atomic_types[index]].append(charge)
+
+        self.dict_with_right_charges_by_atom_type = dict_with_right_charges_by_atom_type
+        self.atom_types_in_set = atom_types_in_set
 
     def set_atomic_types(self, atomic_types):
         self._atomic_types = atomic_types
@@ -125,25 +138,6 @@ class Arciclass:
     @property
     def atomic_types(self):
         return self._atomic_types
-
-    def load_charges_for_par_by_atom_types(self, file, list_with_atomic_types):
-        with open(file, "r") as right_charges_file:
-            dict_with_right_charges_by_atom_type = {}
-            for atom in list_with_atomic_types:
-                dict_with_right_charges_by_atom_type[str(atom)] = []
-            all_atomic_types = []
-            for line in right_charges_file:
-                ls = line.split()
-                if len(ls) not in {0, 1, 3}:
-                    exit(colored("File " + file + " with right charges is wrong! \n", "red"))
-                if len(ls) == 3:
-                    try:
-                        dict_with_right_charges_by_atom_type[ls[1]].append(float(ls[2]))
-                        all_atomic_types.append(ls[1])
-                    except KeyError:
-                        pass
-        self._all_atomic_types = all_atomic_types
-        self.dict_with_right_charges_by_atom_type = dict_with_right_charges_by_atom_type
 
     @property
     def all_atomic_types(self):
@@ -347,8 +341,7 @@ def saefm_calculate(num_of_atoms, parameters_values, parameters_keys, bonded_ato
                 break
             symbol_aatom = parameters_keys[aatom - 1]
             bonded_atoms_elektronegativity += parameters_values[symbol_aatom][1]
-        charge = bonded_atoms_elektronegativity * (parameters_values[symbol_i][2] + parameters_values[symbol_i][4]) - \
-                 parameters_values[symbol_i][2]
+        charge = bonded_atoms_elektronegativity * parameters_values[symbol_i][3] - parameters_values[symbol_i][2]
         results[i - 1] = charge
     re = np.array([0.0 for x in range(num_of_atoms)])
     for i in range(1, num_of_atoms + 1):
@@ -371,7 +364,7 @@ class SAEFM(Arciclass):
         return saefm_calculate(num_of_atom, self.list_of_lists_of_parameters, molecule.s_numbers,
                                molecule.c_bonded_atoms, molecule.c_bonded_bonded_atoms)
 
-    def calculate_slow(self, molecule):
+    def calculate_(self, molecule):
         num_of_atoms = len(molecule)
         results = []
         for i in range(1, num_of_atoms + 1):
@@ -385,6 +378,7 @@ class SAEFM(Arciclass):
             for aatom in bonded_bonded_atoms:
                 symbol_aatom = self.symbol(aatom, molecule)
                 bonded_atoms_elektronegativity += self.get_parameter(symbol_aatom + "~2")
+
             charge = bonded_atoms_elektronegativity * self.get_parameter(symbol_i + "~4") - self.get_parameter(
                 symbol_i + "~3")
             results.append(charge)

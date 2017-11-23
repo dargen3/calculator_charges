@@ -39,17 +39,20 @@ def loadig_data_from_sdf_and_chg_file(sdf_input, charges, atom_type, atom_type_f
                 for atom in molecule.bonded_atoms[index + 1]:
                     bonded_atom_type.append(m_symbols[atom - 1])
                 locations[molecule.name].append((index + 1, bonded_atom_type))
+    print(len(locations))
+    switch = True
     with open(charges, "r") as charges:
         charges_data = []
         indexes = []
         for line in charges:
             try:
                 l0 = line.split()[0]
-                if l0 in locations:
+                if l0 in locations and switch:
                     name = l0
                     indexes = [x[0] for x in locations[l0]]
             except IndexError:
-                pass
+                switch = True
+                continue
             ls = line.split()
             if len(ls) == 3 and int(ls[0]) in indexes:
                 charges_data.append([name, indexes[0], float(ls[2])])
@@ -57,6 +60,7 @@ def loadig_data_from_sdf_and_chg_file(sdf_input, charges, atom_type, atom_type_f
                     indexes.pop(0)
                 except IndexError:
                     pass
+            switch = False
     charges_data = sorted(charges_data)
     index = 0
     for x in sorted(locations):
@@ -84,8 +88,8 @@ def graph_of_all_charges(atom_type_for_clusterization, charges_values, bw, save_
     fig_s.set_xlabel("Charge", fontsize=12)
     fig_s.set_ylabel("Density (bw = {})".format(bw), fontsize=12)
     kde = gaussian_kde(charges_values, bw_method=bw)
-    x_grid = linspace(min(charges_values)-(max(charges_values) - min(charges_values)) * 0.3,
-                      max(charges_values)+(max(charges_values) - min(charges_values)) * 0.3, 1000)
+    x_grid = linspace(min(charges_values) - (max(charges_values) - min(charges_values)) * 0.3,
+                      max(charges_values) + (max(charges_values) - min(charges_values)) * 0.3, 1000)
     kde.evaluate(x_grid)
     fig_s.plot(x_grid, kde(x_grid))
     if save_fig:
@@ -114,7 +118,7 @@ def print_clusters(clusters, counts, average_charges, charges_data):
         print("Average charge {:.2f}:".format(average_charges[cluster][0]))
         atoms_count = {}
         for charge in charges_data:
-            if charge[4] == x:
+            if charge[4] == cluster:
                 for bonded_atom in charge[3]:
                     if bonded_atom not in atoms_count:
                         atoms_count[bonded_atom] = 1
@@ -122,7 +126,7 @@ def print_clusters(clusters, counts, average_charges, charges_data):
                         atoms_count[bonded_atom] += 1
         stat = []
         for number in atoms_count:
-            stat.append((x, float(atoms_count[number] / num_of_atoms)))
+            stat.append((number, float(atoms_count[number] / num_of_atoms)))
         stat = sorted(stat, key=itemgetter(1))[::-1]
         average_num_of_bonded_atoms = 0
         for x in stat:
@@ -131,9 +135,9 @@ def print_clusters(clusters, counts, average_charges, charges_data):
         for index, comp in enumerate(stat):
             if index == 0:
                 print("Average atom composition: ", end="")
-                print(" {}: {:.2f}".format(comp[0], float(x[1])))
+                print(" {}: {:.2f}".format(comp[0], float(comp[1])))
             else:
-                print("{:>28}: {:.2f}".format(comp[0], float(x[1])))
+                print("{:>30}: {:.2f}".format(comp[0], float(comp[1])))
         print("\n\n\n\n")
 
 
@@ -145,6 +149,7 @@ def clusterize(charges, sdf_input, logger, atom_type_for_clusterization, cluster
     atom_type = check_type_of_atom(atom_type_for_clusterization)
     charges_data, charges_values = loadig_data_from_sdf_and_chg_file(sdf_input, charges, atom_type,
                                                                      atom_type_for_clusterization)
+
     logger.info(colored("Loading of data was sucessfull. \n\n\n", "green"))
     if clusters == "0":
         graph_of_all_charges(atom_type_for_clusterization, charges_values, fine_of_graph, save_fig)
@@ -152,7 +157,3 @@ def clusterize(charges, sdf_input, logger, atom_type_for_clusterization, cluster
     counts, average_charges, charges_data = clust(charges_values, clusters, charges_data)
     logger.info(colored("Clusterization was sucessfull. \n\n\n", "green"))
     print_clusters(clusters, counts, average_charges, charges_data)
-
-
-
-

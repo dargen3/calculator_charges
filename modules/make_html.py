@@ -67,15 +67,15 @@ def make_html(name, sdf, method, all_atoms, all_molecules, fig_all, atomic_types
         html_file.write("</tr>\n")
         for x in atomic_types_data:
             if x[1] < 0.05:
-                html_file.write("<tr style=\"background-color: green; color: white;\">\n")
+                html_file.write("<tr style=\"background-color: green;\">\n")
             elif x[1] < 0.1:
-                html_file.write("<tr style=\"background-color: #4ca64c; color: white;\">\n")
+                html_file.write("<tr style=\"background-color: #4ca64c;\">\n")
             elif x[1] < 0.15:
-                html_file.write("<tr style=\"background-color: #99cc99; color: white;\">\n")
+                html_file.write("<tr style=\"background-color: #99cc99;\">\n")
             elif x[1] < 0.2:
-                html_file.write("<tr style=\"background-color: yellow; color: white;\">\n")
+                html_file.write("<tr style=\"background-color: yellow;\">\n")
             elif x[1] < 0.3:
-                html_file.write("<tr style=\"background-color: orange; color: white;\">\n")
+                html_file.write("<tr style=\"background-color: orange;\">\n")
             elif x[1] < 0.4:
                 html_file.write("<tr style=\"background-color: red; color: white;\">\n")
             elif x[1] >= 0.4:
@@ -97,7 +97,7 @@ def make_html(name, sdf, method, all_atoms, all_molecules, fig_all, atomic_types
         html_file.write("<td style=\"background-color: #99cc99;\">&lt; 0.15</td>\n")
         html_file.write("<td style=\"background-color: yellow;\">&lt; 0.2</td>\n")
         html_file.write("<td style=\"background-color: orange;\">&lt; 0.3</td>\n")
-        html_file.write("<td style=\"background-color: red;\">&lt; 0.4</td>\n")
+        html_file.write("<td style=\"background-color: red; color: white;\">&lt; 0.4</td>\n")
         html_file.write("<td style=\"background-color: darkred; color: white;\">&gt;= 0.4</td>\n")
         html_file.write("</tr>\n")
         html_file.write("</table>\n")
@@ -129,7 +129,6 @@ def make_complete_html(verbose):
                 file = ""
                 for x in result:
                     file += "/" + x
-                print(name)
                 html_file.write("<a href = \"{}\">{}</a>\n<br />\n".format(file[1:], name))
     if verbose:
         print(colored("Html was created sucessfully!\n\n\n", "green"))

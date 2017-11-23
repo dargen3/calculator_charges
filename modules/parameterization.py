@@ -5,20 +5,21 @@ from subprocess import call
 from os import getcwd, rename, remove
 from tempfile import NamedTemporaryFile
 from tabulate import tabulate
-from modules.set_of_molecule import Set_of_molecule
+from .set_of_molecule import Set_of_molecule
 import importlib
 from scipy.optimize import minimize, differential_evolution
 from numba import jit
 from scipy import stats
 from numpy import linalg, sqrt
 from math import isnan
-from modules.calculation import writing_to_list, writing_to_file
-from modules.make_html import make_html
-from modules.alarm import alarm
-from modules.comparison import control_if_arguments_files_exist_for_com, making_dictionary_with_charges_para, \
+from .calculation import writing_to_list, writing_to_file
+from .make_html import make_html
+from .alarm import alarm
+from .comparison import control_if_arguments_files_exist_for_com, making_dictionary_with_charges_para, \
     statistics_for_all_atoms, plotting, making_final_list, statistics_for_molecules, statistics_for_atom_type
 from matplotlib import pyplot as plt
 import datetime
+from .statistics import statistics as statistics_sdf_and_chg_file
 
 
 def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters, new_parameters, force, chg_output):
@@ -132,7 +133,7 @@ def write_to_para(parameters, sdf_input, method_par, choised_num_of_mol, table_f
         if validation:
             parameters.write("Mode: Validation 70:30\n\n")
         else:
-            parameters.write("Mode: Full set parameterization")
+            parameters.write("Mode: Full set parameterization\n\n")
         parameters.write("Statistics for all atoms:\n")
         parameters.write(tabulate(table_for_all_atoms,
                                   headers=["RMSD", "max deviation", "average deviation", "pearson**2",
@@ -175,11 +176,13 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
     pearson2 = stats.pearsonr(list_with_results, method.right_charges_for_parametrization[:len(list_with_results)])[
                    0] ** 2
     deviation_list = zip(list_with_results, method.right_charges_for_parametrization)
-    atomic_types = sorted(method.atomic_types)
+    atomic_types = sorted(method.atom_types_in_set)
+
     dict_with_right_charges_by_atom_type = {}
     for atom in atomic_types:
         dict_with_right_charges_by_atom_type[str(atom)] = []
     all_atomic_types = method.all_atomic_types
+
     for x, result in enumerate(list_with_results):
         dict_with_right_charges_by_atom_type[all_atomic_types[x]].append(result)
     statistic_list_rmsd = [0] * len(atomic_types)
@@ -218,8 +221,8 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
                  args_save_fig, args_make_html, alarm_after_para):
     control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters,
                                              new_parameters, rewriting_with_force, chg_output)
-    call_stat = "./calculator_charges.py --mode statistics --sdf_input {} --charges {}".format(sdf_input, right_charges)
-    call(call_stat, shell=True)
+
+    statistics_sdf_and_chg_file(right_charges, sdf_input, logger)
     try:
         method = getattr(importlib.import_module("modules.methods"), args_method)
     except AttributeError:
@@ -251,13 +254,13 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
         choised_num_of_mol = round(choised_num_of_mol * 0.7)
     set_of_molecule = setm[:choised_num_of_mol]
     atomic_types = control_of_missing_atoms(set_of_molecule, method, parameters)
-    method.set_atomic_types(atomic_types)
+    sorted_atomic_types = method.parameters_keys
+    method.set_atomic_types(sorted_atomic_types)
     logger.info(colored("Loading molecule data from {} was successful.\n\n\n".format(sdf_input),
                         "green"))
     method.set_sorted_parameters
     logger.info("Loading charges data from {} ...".format(right_charges))
-    method.load_charges_for_par(right_charges)
-    method.load_charges_for_par_by_atom_types(right_charges, atomic_types)
+    method.load_charges_for_par(right_charges, atomic_types, setm[:number_of_molecules])
     logger.info(colored("Loading of charges data was sucessfull. \n\n\n", "green"))
     logger.info(str(number_of_molecules) + " molecules was loaded.\n\n\n")
     input_parameters_list = method.sorted_parameters_values
@@ -271,8 +274,6 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
         bounds = [(0.0001, 4)] * len(input_parameters_list)
     else:
         bounds = [(-1, 1)] * len(input_parameters_list)
-    set_of_molecule = setm[:choised_num_of_mol]
-    sorted_atomic_types = method.parameters_keys
     for molecule in set_of_molecule:
         molecule.symbol_to_number(sorted_atomic_types, method.parameters_type)
         molecule.set_length_correction(method.length_correction)
@@ -293,6 +294,12 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
         for molecule in set_of_molecule:
             molecule.symbol_to_number(sorted_atomic_types, method.parameters_type)
             molecule.set_length_correction(method.length_correction)
+    else:
+        set_of_molecule = setm[:number_of_molecules]
+        if choised_num_of_mol != number_of_molecules:
+            for molecule in set_of_molecule[choised_num_of_mol:]:
+                molecule.symbol_to_number(sorted_atomic_types, method.parameters_type)
+                molecule.set_length_correction(method.length_correction)
     method.make_list_of_lists_of_parameters()
     list_with_data = []
     all_atomic_types_calc = []
@@ -339,7 +346,7 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
     else:
         method_par = "minimize"
     now = datetime.datetime.now()
-    write_to_para(parameters, sdf_input, method_par, choised_num_of_mol, table_for_all_atoms,
+    write_to_para(new_parameters, sdf_input, method_par, choised_num_of_mol, table_for_all_atoms,
                   table_for_all_molecules, statistics_data, now, validation)
     print(tabulate(statistics_data, headers=["atomic type", "RMSD", "max deviation", "average deviation",
                                              "pearson**2", "num. of atoms"]))

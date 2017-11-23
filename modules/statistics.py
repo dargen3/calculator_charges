@@ -121,7 +121,7 @@ def statistics(charges, sdf_input, logger):
                                                                                           sdf_input,
                                                                                           logger)
     if charges_data == sdf_data and sdf_names == charges_names:
-        logger.info(colored("Sdf file is for the same molecules like charge file!", "green"))
+        logger.info(colored("Sdf file is for the same molecules like charge file!\n\n\n", "green"))
     else:
         if charges_data == sdf_data and sdf_names != charges_names:
             print(colored(
@@ -137,5 +137,4 @@ def statistics(charges, sdf_input, logger):
         if decision == "yes":
             create_new_files(sdf_names, charges_names, sdf_input, charges, setm, number_of_lines)
             exit(colored("Cresting new files was successful!", "green"))
-        else:
-            exit("\n")
+        exit("\n")
