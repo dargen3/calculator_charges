@@ -4,6 +4,7 @@ all global parameters must begin by small letter
 
 
 
+
 pseudocode of optimalization:
 
 take so much molecules from sdf, so that running time for diferential evolution was real for you (usualy 30-50 molecules)
