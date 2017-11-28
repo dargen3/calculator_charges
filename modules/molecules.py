@@ -17,11 +17,6 @@ def bonded_atoms(index, set_of_bonds):
 
 
 @jit(nopython=True)
-def distance(x1, y1, z1, x2, y2, z2):
-    return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
-
-
-@jit(nopython=True)
 def bond_type(index1, index2, bonds):
     if index2 < index1:
         index1, index2 = index2, index1
@@ -94,11 +89,6 @@ class Molecule:
     def symbol_gravity(self, index):
         return self._symbol_gravity[index-1]
 
-    def contain_atom(self, atom_type):
-        if atom_type in self._atoms_types:
-            return True
-        return False
-
     def symbol_to_number(self, atomic_types, type):
         s_numbers = []
         if type == "atom":
@@ -160,17 +150,5 @@ class Molecule:
     def get_atom_type_with_idx(self, index):
         return self._atoms[index - 1].symbol
 
-    def get_distance_between_atoms(self, index1, index2):
-        x1, y1, z1 = self._atoms[index1 - 1].position
-        x2, y2, z2 = self._atoms[index2 - 1].position
-        return distance(x1, y1, z1, x2, y2, z2)
-    """
-    def get_bond_type_between_atoms(self, index1, index2):
-        try:
-            return self._bonds_types[bond_type(index1, index2, self._bonds)]
-        except TypeError:
-            pass
-    """
-    def get_bonded_atoms(self, index):
-        return bonded_atoms(index, self._bonds)
+
 

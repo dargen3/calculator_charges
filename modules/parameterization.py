@@ -210,8 +210,8 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
         greater_rmsd = 1000.0
     if isnan(pearson2):
         pearson2 = 0.0
-    print("Actual RMSD: " + str(rmsd)[:9] + "     Actual max deviation: " + str(abs_dev)[:9] + "     Worst RMSD: " +
-          str(greater_rmsd)[:9] + "     Worst pearson**2: " + str(min(statistic_list_pear))[:9], end="\r")
+    print("Actual RMSD: " + str(rmsd)[:8] + "   Actual max deviation: " + str(abs_dev)[:8] + "   Worst RMSD: " +
+          str(greater_rmsd)[:8] + "   Worst pearson**2: " + str(min(statistic_list_pear))[:8], end="\r")
     return (1 - min(statistic_list_pear)) + (1 - pearson2) + greater_rmsd * 10 + rmsd * 20 + sum(
         statistic_list_pear) / len(statistic_list_pear) + sum(statistic_list_rmsd) / len(statistic_list_rmsd)
 

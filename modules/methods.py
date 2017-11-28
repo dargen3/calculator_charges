@@ -359,12 +359,12 @@ def saefm_calculate(num_of_atoms, parameters_values, parameters_keys, bonded_ato
 
 
 class SAEFM(Arciclass):
-    def calculate(self, molecule):
+    def calculate_(self, molecule):
         num_of_atom = len(molecule)
         return saefm_calculate(num_of_atom, self.list_of_lists_of_parameters, molecule.s_numbers,
                                molecule.c_bonded_atoms, molecule.c_bonded_bonded_atoms)
 
-    def calculate_(self, molecule):
+    def calculate(self, molecule):
         num_of_atoms = len(molecule)
         results = []
         for i in range(1, num_of_atoms + 1):
@@ -374,6 +374,7 @@ class SAEFM(Arciclass):
             for atom in bonded_atoms:
                 symbol_atom = self.symbol(atom, molecule)
                 bonded_atoms_elektronegativity += self.get_parameter(symbol_atom + "~1")
+
             bonded_bonded_atoms = molecule.bonded_bonded_atoms[i]
             for aatom in bonded_bonded_atoms:
                 symbol_aatom = self.symbol(aatom, molecule)
@@ -389,5 +390,9 @@ class SAEFM(Arciclass):
             for atom in bonded_atoms:
                 symbol_atom = self.symbol(atom, molecule)
                 rec += self.get_parameter(symbol_atom + "~5") * results[atom - 1]
+            bonded_bonded_atoms = molecule.bonded_bonded_atoms[i]
+            for aatom in bonded_bonded_atoms:
+                symbol_aatom = self.symbol(aatom, molecule)
+                rec += self.get_parameter(symbol_aatom + "~6") * results[aatom - 1]
             re.append(rec + results[i - 1])
         return final(re)
