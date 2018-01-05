@@ -31,15 +31,15 @@ def loadig_data_from_sdf_and_chg_file(sdf_input, charges, atom_type, atom_type_f
     set_of_molecule = setm[:number_of_molecules]
     for molecule in set_of_molecule:
         m_symbols = molecule.symbols(atom_type)
+        mba_symbols = molecule.symbols("atom~high_bond")
         for index, x in enumerate(m_symbols):
             if x == atom_type_for_clusterization:
                 if molecule.name not in locations:
                     locations[molecule.name] = []
                 bonded_atom_type = []
                 for atom in molecule.bonded_atoms[index + 1]:
-                    bonded_atom_type.append(m_symbols[atom - 1])
+                    bonded_atom_type.append(mba_symbols[atom - 1])
                 locations[molecule.name].append((index + 1, bonded_atom_type))
-    print(len(locations))
     switch = True
     with open(charges, "r") as charges:
         charges_data = []
@@ -76,11 +76,9 @@ def loadig_data_from_sdf_and_chg_file(sdf_input, charges, atom_type, atom_type_f
     return charges_data, charges_values
 
 
-def graph_of_all_charges(atom_type_for_clusterization, charges_values, bw, save_fig):
-    if bw is None:
+def graph_of_all_charges(atom_type_for_clusterization, charges_values,  save_fig, bw):
+    if bw == None:
         bw = 0.1
-    else:
-        bw = float(bw)
     fig = plt.figure(figsize=(11, 9))
     fig_s = fig.add_subplot(111)
     title = "Kernel density plot for {}".format(atom_type_for_clusterization)
@@ -95,12 +93,11 @@ def graph_of_all_charges(atom_type_for_clusterization, charges_values, bw, save_
     if save_fig:
         fig.savefig(title.replace(" ", "_"))
     plt.show()
-    exit()
 
 
 def clust(charges_values, clusters, charges_data):
     charges_values_2d = [[x, x] for x in charges_values]
-    kmeans = KMeans(n_clusters=int(clusters), random_state=0).fit(charges_values_2d)
+    kmeans = KMeans(n_clusters=clusters, random_state=0).fit(charges_values_2d)
     distribution = kmeans.labels_
     items, count = unique(distribution, return_counts=True)
     counts = dict(zip(items, count))
@@ -111,7 +108,7 @@ def clust(charges_values, clusters, charges_data):
 
 
 def print_clusters(clusters, counts, average_charges, charges_data):
-    for cluster in range(int(clusters)):
+    for cluster in range(clusters):
         print("Cluster: {}".format(cluster + 1))
         num_of_atoms = counts[cluster]
         print("Number of atoms: {}".format(num_of_atoms))
@@ -133,6 +130,8 @@ def print_clusters(clusters, counts, average_charges, charges_data):
             average_num_of_bonded_atoms += x[1]
         print("Average number of bonded atoms: {:.2f}".format(average_num_of_bonded_atoms))
         for index, comp in enumerate(stat):
+            if float(comp[1]) < 0.001:
+                break
             if index == 0:
                 print("Average atom composition: ", end="")
                 print(" {}: {:.2f}".format(comp[0], float(comp[1])))
@@ -145,14 +144,27 @@ def clusterize(charges, sdf_input, logger, atom_type_for_clusterization, cluster
     control_if_arguments_files_exist_for_clust(charges, sdf_input)
     logger.info("Checking, if sdf file and chg file are for the same molecules...\n\n\n")
     statistics(charges, sdf_input, logger)
+    if clusters == 0:
+        atom_type = check_type_of_atom(atom_type_for_clusterization)
+        charges_data, charges_values = loadig_data_from_sdf_and_chg_file(sdf_input, charges, atom_type,
+                                                                         atom_type_for_clusterization)
+        logger.info("\n\n\nLoading data... from {} and {}.".format(sdf_input, charges))
+        graph_of_all_charges(atom_type_for_clusterization, charges_values, fine_of_graph, save_fig)
+        exit()
+    elif clusters == -1:
+        logger.info("\n\n\nClusterization...".format(sdf_input, charges))
+        for atom_type_for_clusterization in Set_of_molecule(sdf_input).statistics_data(quiet=True):
+            atom_type = check_type_of_atom(atom_type_for_clusterization)
+            charges_data, charges_values = loadig_data_from_sdf_and_chg_file(sdf_input, charges, atom_type,
+                                                                             atom_type_for_clusterization)
+            graph_of_all_charges(atom_type_for_clusterization, charges_values, fine_of_graph, save_fig)
+        logger.info("\n\n\nClusterization was sucessfull.".format(sdf_input, charges))
+        exit()
     logger.info("\n\n\nLoading data... from {} and {}.".format(sdf_input, charges))
     atom_type = check_type_of_atom(atom_type_for_clusterization)
     charges_data, charges_values = loadig_data_from_sdf_and_chg_file(sdf_input, charges, atom_type,
                                                                      atom_type_for_clusterization)
-
     logger.info(colored("Loading of data was sucessfull. \n\n\n", "green"))
-    if clusters == "0":
-        graph_of_all_charges(atom_type_for_clusterization, charges_values, fine_of_graph, save_fig)
     logger.info("Clusterization of {} clusters...".format(clusters))
     counts, average_charges, charges_data = clust(charges_values, clusters, charges_data)
     logger.info(colored("Clusterization was sucessfull. \n\n\n", "green"))

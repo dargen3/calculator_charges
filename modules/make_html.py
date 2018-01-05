@@ -1,6 +1,7 @@
 from glob import glob
 from os import system
 from termcolor import colored
+from modules.set_of_molecule import Set_of_molecule
 
 
 def make_html(name, sdf, method, all_atoms, all_molecules, fig_all, atomic_types, atomic_types_data, time, method_para,
@@ -112,26 +113,58 @@ def make_complete_html(verbose):
     if verbose:
         print("Creating html...")
     with open("data/index.html", "w") as html_file:
-        html_file.write("<h1>Charges method data</h1>\n")
-        html_file.write("<a href = \"data\">All data</a>\n<br />\n")
-        files = glob("data/*/*/*.html")
-        methods = {}
-        for file in files:
+        html_file.write("<h1>Calculator charges</h1>\n")
+        html_file.write("<h2>Source code: https://github.com/dargen3/calculator_charges</h2>\n")
+        html_file.write("<h2>Data:</h2>\n")
+        html_file.write("<a href = \"data\">All data</a>\n<br />\n<br />\n<br />\n<br />\n")
+        html_files = glob("data/*/*/*.html")
+        methods_data_html = {}
+        sets_of_molecules = []
+        for file in html_files:
             splitted_path = file.split("/")
             method = splitted_path[1]
-            if method not in methods:
-                methods[method] = []
-            methods[method].append(splitted_path)
-        for method in methods:
-            html_file.write("<h2>{}</h2>\n".format(method))
-            for result in methods[method]:
-                name = result[3][:-5]
-                file = ""
-                for x in result:
-                    file += "/" + x
-                html_file.write("<a href = \"{}\">{}</a>\n<br />\n".format(file[1:], name))
-    if verbose:
-        print(colored("Html was created sucessfully!\n\n\n", "green"))
+            sets_of_molecules.append(splitted_path[-2])
+            if method not in methods_data_html:
+                methods_data_html[method] = []
+            methods_data_html[method].append(splitted_path)
+        sdf_files = glob("data/*/*/*.sdf")
+        sdf_files_check = []
+        for sdf_file_path in sdf_files:
+            sdf_file = sdf_file_path.split("/")[-1]
+            if sdf_file not in sdf_files_check:
+                Set_of_molecule(sdf_file_path).statistics_data(write_to_file="data/sets_of_molecules_info/{}_info.txt".format(sdf_file[:-4]))
+                sdf_files_check.append(sdf_file)
+        sets_of_molecules = sorted(set(sets_of_molecules))
+        html_file.write("<table border=1>\n")
+        html_file.write("<tbody>\n")
+        html_file.write("<th>Method</th>\n")
+        for setm in sets_of_molecules:
+            html_file.write("<th>{}</th>\n".format(setm))
+        html_file.write("</tr>\n")
+        html_file.write("<tr>\n")
+        html_file.write("<td>Set of molecules info</td>")
+        for set_info in sets_of_molecules:
+            html_file.write("<td><a href = \"data/sets_of_molecules_info/{}_info.txt\">{}_info</a>\n<br />\n</td>\n".format(set_info , set_info))
+        html_file.write("</tr>\n")
+        for method in sorted(methods_data_html):
+            html_file.write("<tr>\n")
+            html_file.write("<td>{}</td>\n".format(method))
+            for setm in sets_of_molecules:
+                is_there = False
+                for setm_of in methods_data_html[method]:
+                    if setm_of[2] == setm:
+                        is_there = True
+                        break
+                if is_there == True:
+                    path = "data/{}/{}/{}_{}.html".format(method, setm, setm, method)
+                    name = "{} {}".format(setm, method)
+                    html_file.write("<td><a href = \"{}\">{}</a>\n<br />\n</td>\n".format(path, name))
+                else:
+                    html_file.write("<td>no results</td>\n".format(setm))
+            html_file.write("</tr>\n")
+        html_file.write("<tbody>\n")
+        html_file.write("</table>\n")
+        html_file.write("<br /><br /><br /><br /><h3>Contact: dargen3@centrum.cz</h3>\n")
         print("Copying of data...\n\n\n")
     system("scp -r  data dargen3@lcc.ncbr.muni.cz:/home/dargen3/www/")
     if verbose:

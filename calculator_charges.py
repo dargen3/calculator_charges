@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import warnings
 from numpy import random
 from modules.calculation import calculate_charges
@@ -8,7 +8,7 @@ from modules.statistics import statistics
 from modules.clusterization import clusterize
 from modules.make_html import make_complete_html
 from modules.set_argparse import settings_argparse
-from modules.parameterization_find_args import find_argumets
+from modules.parameterization_find_args import find_argumets_and_parameterize
 from modules.set_of_molecule import Set_of_molecule
 
 if __name__ == "__main__":
@@ -37,10 +37,31 @@ if __name__ == "__main__":
 
     elif args.mode == "clusterization":
         clusterize(args.charges, args.sdf_input, logger, args.atom_type_for_clusterization, args.clusters,
-                   args.fine_of_graph, args.save_fig)
+                   args.save_fig, args.fine_of_graph)
 
     elif args.mode == "parameterization_find_args":
-        find_argumets(args.path, logger)
+        find_argumets_and_parameterize(args.path, logger, args.mode, args.method_parameterization, args.num_of_parameterized_mol)
+
+    elif args.mode == "parameterization_send_meta":
+        find_argumets_and_parameterize(args.path, logger, args.mode, args.method_parameterization, args.num_of_parameterized_mol)
 
     elif args.mode == "set_of_molecule_info":
-        Set_of_molecule(args.sdf_input).statistics_data
+        Set_of_molecule(args.sdf_input).statistics_data()
+
+    elif args.mode == "experimental":
+        set_of_molecule = Set_of_molecule(args.sdf_input)
+        atom_types = []
+        for molecule in set_of_molecule[:len(set_of_molecule)]:
+            atom_types.extend(molecule.get_all_atom_types())
+        from pprint import pprint
+        pprint(sorted(set(atom_types)))
+        for x in sorted(set(atom_types)):
+            print("{} 1".format(x))
+    print("\n")
+
+
+
+
+
+
+

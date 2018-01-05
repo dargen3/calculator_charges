@@ -7,7 +7,7 @@ from tempfile import NamedTemporaryFile
 from tabulate import tabulate
 from .set_of_molecule import Set_of_molecule
 import importlib
-from scipy.optimize import minimize, differential_evolution
+from scipy.optimize import minimize, differential_evolution, basinhopping
 from numba import jit
 from scipy import stats
 from numpy import linalg, sqrt
@@ -54,14 +54,11 @@ def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameter
 
 
 def control_of_missing_atoms(set_of_molecule, method, parameters):
-    list_of_atoms = []
+    list_of_symbols = []
     for molecule in set_of_molecule:
-        num_of_atoms = len(molecule)
-        for i in range(num_of_atoms):
-            symbol = molecule.get_atom_type_with_idx(i)
-            if symbol not in list_of_atoms:
-                list_of_atoms.append(symbol)
-    missing_atoms = set(list_of_atoms) - set(method.parameters_atoms)
+        symbols = molecule.symbols(method.parameters_type)
+        list_of_symbols.extend(symbols)
+    missing_atoms = set(list_of_symbols) - set(method.parameters_keys)
     if len(missing_atoms) > 0:
         print(colored("Warning. File with parameters not contain parameters for atom:", "red"))
         for atom in missing_atoms:
@@ -74,7 +71,7 @@ def control_of_missing_atoms(set_of_molecule, method, parameters):
             method.load_parameters(parameters)
         else:
             exit("\n")
-    return list(set(list_of_atoms))
+
 
 
 def writing_new_parameters(parameters, new_parameters_file, res, method):
@@ -163,7 +160,7 @@ def statistics(deviation_list):
     return rmsd_list, abs_dev
 
 
-def calculating_charges(list_of_parameters, method, set_of_molecule):
+def calculating_charges(list_of_parameters, method, set_of_molecule, objective_function):
     method.load_parameters_from_list(list_of_parameters)
     method.make_list_of_lists_of_parameters()
     list_with_results = []
@@ -172,7 +169,7 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
             list_with_results.extend(method.calculate(molecule))
         except linalg.linalg.LinAlgError:
             pass
-    greater_rmsd = False
+    # greater_rmsd = False
     pearson2 = stats.pearsonr(list_with_results, method.right_charges_for_parametrization[:len(list_with_results)])[
                    0] ** 2
     deviation_list = zip(list_with_results, method.right_charges_for_parametrization)
@@ -194,6 +191,7 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
         try:
             rmsd_list_at, abs_dev_at = statistics(list(deviation_list_at))
         except ValueError:
+            print(list(deviation_list_at))
             exit(colored("ERROR!!! This is few molecules for parameterization", "red"))
         statistic_list_rmsd[atomic_types.index(atom)] = sqrt((1.0 / len(rmsd_list_at)) * sum(rmsd_list_at))
         statistic_list_pear[atomic_types.index(atom)] = stats.pearsonr(dict_with_right_charges_by_atom_type[atom],
@@ -212,8 +210,11 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
         pearson2 = 0.0
     print("Actual RMSD: " + str(rmsd)[:8] + "   Actual max deviation: " + str(abs_dev)[:8] + "   Worst RMSD: " +
           str(greater_rmsd)[:8] + "   Worst pearson**2: " + str(min(statistic_list_pear))[:8], end="\r")
-    return (1 - min(statistic_list_pear)) + (1 - pearson2) + greater_rmsd * 10 + rmsd * 20 + sum(
-        statistic_list_pear) / len(statistic_list_pear) + sum(statistic_list_rmsd) / len(statistic_list_rmsd)
+    if objective_function == "rmsd":
+        return rmsd
+    elif objective_function == "all":
+        return (1 - min(statistic_list_pear)) + (1 - pearson2) + greater_rmsd * 10 + rmsd * 20 + sum(
+            statistic_list_pear) / len(statistic_list_pear) + sum(statistic_list_rmsd) / len(statistic_list_rmsd)
 
 
 def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, validation, right_charges,
@@ -239,28 +240,30 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
     method.set_parameters_type()
     logger.info(colored("Loading of parameters was sucessfull.\n\n\n", "green"))
     logger.info("Loading molecule data from {} ...".format(sdf_input))
-    setm = Set_of_molecule(sdf_input)
+    if method.parameters_type == "atom~high_bond~bonded_atoms":
+        setm = Set_of_molecule(sdf_input, parameters_keys=method.parameters_keys)
+    else:
+        setm = Set_of_molecule(sdf_input)
     number_of_molecules = len(setm)
     set_of_molecule = setm[:number_of_molecules]
     all_atomic_types = []
     for molecule in set_of_molecule:
         all_atomic_types.extend(molecule.symbols(method.parameters_type))
     if num_of_parameterized_mol:
-        choised_num_of_mol = int(num_of_parameterized_mol)
+        choised_num_of_mol = num_of_parameterized_mol
     else:
         choised_num_of_mol = number_of_molecules
     if validation:
         high_limit = choised_num_of_mol
         choised_num_of_mol = round(choised_num_of_mol * 0.7)
     set_of_molecule = setm[:choised_num_of_mol]
-    atomic_types = control_of_missing_atoms(set_of_molecule, method, parameters)
+    control_of_missing_atoms(set_of_molecule, method, parameters)
     sorted_atomic_types = method.parameters_keys
     method.set_atomic_types(sorted_atomic_types)
     logger.info(colored("Loading molecule data from {} was successful.\n\n\n".format(sdf_input),
                         "green"))
-    method.set_sorted_parameters
     logger.info("Loading charges data from {} ...".format(right_charges))
-    method.load_charges_for_par(right_charges, atomic_types, setm[:number_of_molecules])
+    method.load_charges_for_par(right_charges, setm[:number_of_molecules])
     logger.info(colored("Loading of charges data was sucessfull. \n\n\n", "green"))
     logger.info(str(number_of_molecules) + " molecules was loaded.\n\n\n")
     input_parameters_list = method.sorted_parameters_values
@@ -273,22 +276,44 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
     elif args_method == "SFKEEM":
         bounds = [(0.0001, 4)] * len(input_parameters_list)
     else:
-        bounds = [(-1, 1)] * len(input_parameters_list)
+        bounds = [(-4, 4)] * len(input_parameters_list)
     for molecule in set_of_molecule:
         molecule.symbol_to_number(sorted_atomic_types, method.parameters_type)
         molecule.set_length_correction(method.length_correction)
     method.make_list_of_lists_of_parameters()
-    print("Parameterization running for {} molecules ...".format(choised_num_of_mol))
+    print("Parameterization running for {} molecules ...\n".format(choised_num_of_mol))
     if method_parameterization == "diferential_evolution":
-        res = differential_evolution(calculating_charges, bounds, maxiter=3, args=(method, set_of_molecule))
+        res = differential_evolution(calculating_charges, bounds, maxiter=5, popsize=50, polish=False, args=(method, set_of_molecule, "all"))
+    elif method_parameterization == "basinhopping":
+        res = basinhopping(calculating_charges, input_parameters_list, minimizer_kwargs={"args":(method, set_of_molecule, "all"), "method":"SLSQP"}, stepsize=0.1)
+    elif method_parameterization == "combined":
+        res = differential_evolution(calculating_charges, bounds, maxiter=5, popsize=50, polish=False, args=(method, set_of_molecule, "rmsd"))
+        fun1 = res.fun
+        res = minimize(calculating_charges, res.x, method="SLSQP", bounds=bounds,
+                       args=(method, set_of_molecule, "rmsd"))
+        fun2 = res.fun
+        while abs(fun1 - fun2) > fun2 / 1000.0:
+            fun1 = fun2
+            res = minimize(calculating_charges, res.x, method="SLSQP", bounds=bounds,
+                           args=(method, set_of_molecule, "rmsd"))
+            fun2 = res.fun
+        res = minimize(calculating_charges, res.x, method="SLSQP", bounds=bounds,
+                       args=(method, set_of_molecule, "all"))
+        fun1 = fun2
+        fun2 = res.fun
+        while abs(fun1 - fun2) > fun2 / 1000.0:
+            fun1 = fun2
+            res = minimize(calculating_charges, res.x, method="SLSQP", bounds=bounds,
+                           args=(method, set_of_molecule, "all"))
+            fun2 = res.fun
     else:
         res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds,
-                       args=(method, set_of_molecule))
+                       args=(method, set_of_molecule, "all"))
     final_parameters = res.x
     writing_new_parameters(parameters, new_parameters, final_parameters, method)
-    logger.info("\n\n\nFile with parameters: \n---------------------------------------")
+    logger.info("\n\n\nFile with new parameters: \n---------------------------------------")
     logger.info(colored(open(new_parameters, 'r').read(), "yellow"))
-    logger.info("---------------------------------------")
+    logger.info("---------------------------------------\n\n")
     if validation:
         set_of_molecule = setm[choised_num_of_mol:high_limit]
         for molecule in set_of_molecule:
@@ -310,20 +335,21 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
     logger.info("Writing calculated charges to {} ...".format(chg_output))
     writing_to_file(list_with_data, chg_output)
     logger.info(colored("Writing to {} was successful.\n\n\n".format(chg_output), "green"))
+    plt.switch_backend('agg')
     fig = plt.figure(figsize=(11, 9))
     fig_all = fig.add_subplot(111)
     save_fig = chg_output[:-4] + ".png"
     charges = chg_output
     control_if_arguments_files_exist_for_com(charges, right_charges, save_fig, args_save_fig,
                                              all_mol_to_log, rewriting_with_force)
-    if all_mol_to_log is not None:
+    if all_mol_to_log:
         with open(all_mol_to_log, "a") as mol_log:
             mol_log.write("name   rmsd   max.dev.   av.dev   pearson**2\n")
     char2 = making_dictionary_with_charges_para(charges, all_atomic_types_calc)
     char1 = making_dictionary_with_charges_para(right_charges, all_atomic_types)
     list_with_atomic_data, dict_with_atomic_data, dictionary_with_molecular_data, atoms = making_final_list(char1,
                                                                                                             char2)
-    print("Statistics for all atoms:")
+    print("\nStatistics for all atoms:")
     table_for_all_atoms, axis_range, number_of_atoms = statistics_for_all_atoms(list_with_atomic_data,
                                                                                 fitting=True)
     RMSD = table_for_all_atoms[0][0]

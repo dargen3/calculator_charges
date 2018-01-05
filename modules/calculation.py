@@ -46,11 +46,6 @@ def control_if_arguments_files_exist_for_calc(parameters, sdf_input, chg_output,
 def calculate_charges(parameters, sdf_input, chg_output, rewriting_with_force, args_method, logger):
     control_if_arguments_files_exist_for_calc(parameters, sdf_input, chg_output, rewriting_with_force)
     list_with_data = []
-    logger.info("Loading molecule data from {} ...".format(sdf_input))
-    setm = Set_of_molecule(sdf_input)
-    number_of_molecules = len(setm)
-    logger.info(colored("Loading molecule data from was successful.".format(sdf_input), "green"))
-    logger.info("{} molecules was loaded. \n\n\n".format(number_of_molecules))
     try:
         method = getattr(importlib.import_module("modules.methods"), str(args_method))
     except AttributeError:
@@ -65,6 +60,14 @@ def calculate_charges(parameters, sdf_input, chg_output, rewriting_with_force, a
         exit(colored("ERROR! These parameters are for method {} but you want to calculate charges by method {}!" /
                      "\n\n\n".format(method.method_in_parameters, args_method), "red"))
     logger.info(colored("Loading of parameters was sucessfull.\n\n\n", "green"))
+    logger.info("Loading molecule data from {} ...".format(sdf_input))
+    if method.parameters_type == "atom~high_bond~bonded_atoms":
+        setm = Set_of_molecule(sdf_input, parameters_keys=method.parameters_keys)
+    else:
+        setm = Set_of_molecule(sdf_input)
+    number_of_molecules = len(setm)
+    logger.info(colored("Loading molecule data from was successful.".format(sdf_input), "green"))
+    logger.info("{} molecules was loaded. \n\n\n".format(number_of_molecules))
     logger.info("Calculating of charges ...")
     method.set_parameters_type()
     num_of_err = 0

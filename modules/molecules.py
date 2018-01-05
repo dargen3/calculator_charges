@@ -26,7 +26,7 @@ def bond_type(index1, index2, bonds):
 
 
 class Molecule:
-    def __init__(self, molecule):
+    def __init__(self, molecule, parameters_keys=None):
         self._name = molecule[0]
         self._number_of_atoms = len(molecule[1]["atoms"])
         atoms = []
@@ -77,6 +77,28 @@ class Molecule:
                                                        self._bonded_bonded_atoms[1:]])
         atom_cords = array([atom.position for atom in self._atoms])
         self._distance_matrix = spatial.distance.cdist(atom_cords, atom_cords)
+        if parameters_keys:
+            symbol_gravity_bonded_atoms = []
+            for atom in self._symbol_gravity:
+                symbol_gravity_bonded_atoms.append("{}~x".format(atom))
+            for index, atom in enumerate(self._atoms):
+                for parameter in parameters_keys:
+                    if atom.symbol == parameter[0]:
+                        searched_atom = parameter[2]
+                        for bonded_atom in self.bonded_atoms[index + 1]:
+                            if self._atoms_types[bonded_atom-1] == searched_atom:
+                                symbol_gravity_bonded_atoms[index] = "{}~{}".format(self._symbol_gravity[index], searched_atom)
+            self._atom_gravity_bonded_atoms = symbol_gravity_bonded_atoms
+        all_atomic_types = []
+        for index, atom in enumerate(self._symbol_gravity):
+            atomic_type = []
+            for bonded_atom in self._bonded_atoms[index + 1]:
+                atomic_type.append(self._symbol_gravity[bonded_atom - 1])
+            atomic_type_str = ""
+            for atomic_type in [atom] + sorted(atomic_type):
+                atomic_type_str = atomic_type_str + atomic_type
+            all_atomic_types.append(atomic_type_str)
+        self.all_atomic_types = all_atomic_types
 
     @property
     def c_bonded_atoms(self):
@@ -89,6 +111,9 @@ class Molecule:
     def symbol_gravity(self, index):
         return self._symbol_gravity[index-1]
 
+    def symbol_gravity(self, index):
+        return self._atom_gravity_bonded_atoms[index-1]
+
     def symbol_to_number(self, atomic_types, type):
         s_numbers = []
         if type == "atom":
@@ -99,12 +124,20 @@ class Molecule:
             for atom_gravity in self._symbol_gravity:
                 s_numbers.append(atomic_types.index(atom_gravity))
             self.s_numbers = s_numbers
+        elif type == "atom~high_bond~bonded_atoms":
+            for atom_gravity_bonded_atoms in self._atom_gravity_bonded_atoms:
+                s_numbers.append(atomic_types.index(atom_gravity_bonded_atoms))
+            self.s_numbers = s_numbers
 
     def symbols(self, type):
         if type == "atom":
             return self._atoms_types
         elif type == "atom~high_bond":
             return self._symbol_gravity
+        elif type == "atom~high_bond~bonded_atoms":
+            return self._atom_gravity_bonded_atoms
+        elif type == "full_atom_type":
+            return self.all_atomic_types
 
     @property
     def symbol_grav(self):
@@ -150,5 +183,18 @@ class Molecule:
     def get_atom_type_with_idx(self, index):
         return self._atoms[index - 1].symbol
 
+    def get_full_atom_type_with_idx(self, index):
+        return self.all_atomic_types[index - 1]
 
+    def get_all_atom_types(self):
+        all_atomic_types = []
+        for index, atom in enumerate(self._symbol_gravity):
+            atomic_type = []
+            for bonded_atom in self._bonded_atoms[index+1]:
+                atomic_type.append(self._symbol_gravity[bonded_atom-1])
+            atomic_type_str = ""
+            for atomic_type in [atom]+sorted(atomic_type):
+                atomic_type_str = atomic_type_str + atomic_type
+            all_atomic_types.append(atomic_type_str)
+        return set(all_atomic_types)
 

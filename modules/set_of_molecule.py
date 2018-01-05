@@ -5,7 +5,9 @@ from tabulate import tabulate
 
 
 class Set_of_molecule:
-    def __init__(self, file):
+    def __init__(self, file, parameters_keys=None):
+        if parameters_keys:
+            parameters_keys = [parameter.split("~") for parameter in parameters_keys if parameter[-1] != "x"]
         with open(file, 'r') as if_sdf:
             num_of_molecules = 0
             num_of_lines = 0
@@ -52,7 +54,7 @@ class Set_of_molecule:
                         except IndexError:
                             pass
                     dict_with_mol_data = {"atoms": list_of_atoms, "bonds": list_of_bond, "total_charge": charge}
-                    list_with_all_molecules.append(Molecule((name, dict_with_mol_data)))
+                    list_with_all_molecules.append(Molecule((name, dict_with_mol_data), parameters_keys=parameters_keys))
                     actual_mol += 1
                 elif str(line[-5]) == "3":
                     list_of_atoms = []
@@ -108,28 +110,39 @@ class Set_of_molecule:
     def num_of_lines(self):
         return self._num_of_lines
 
-    @property
-    def statistics_data(self):
+    def statistics_data(self, write_to_file=None, quiet=False):
         number_of_mol = len(self.list_with_molecules)
-        print("\n\n\nStatistics data from set of molecules from {}\n".format(self.file))
-        print("Number of molecules:   {}".format(number_of_mol))
         atom_types = []
         for molecule in self.list_with_molecules:
             atom_types.extend(molecule.symbols("atom~high_bond"))
         number_of_atoms = len(atom_types)
-        print("Number of atoms:       {}".format(number_of_atoms))
         atom_types_counting = {}
         for atom in atom_types:
             if atom not in atom_types_counting:
                 atom_types_counting[atom] = 0
             atom_types_counting[atom] += 1
-        print("Number of atoms type:  {}\n".format(len(atom_types_counting)))
         tab_of_atoms = []
         for atom in sorted(atom_types_counting):
             tab_of_atoms.append((atom, atom_types_counting[atom], round(
                 atom_types_counting[atom] / (number_of_atoms / 100), 2)))
-        print(tabulate(tab_of_atoms, headers=["Type", "Number", "%"]))
-        print("\n\n\n")
+        if quiet:
+            return set(atom_types)
+        if write_to_file == None:
+            print("\n\n\nStatistics data from set of molecules from {}\n".format(self.file))
+            print("Number of molecules:   {}".format(number_of_mol))
+            print("Number of atoms:       {}".format(number_of_atoms))
+            print("Number of atoms type:  {}\n".format(len(atom_types_counting)))
+            print(tabulate(tab_of_atoms, headers=["Type", "Number", "%"]))
+            print("\n\n\n")
+        else:
+            with open(write_to_file, "w") as file_info:
+                file_info.write("\n\n\nStatistics data from set of molecules from {}\n".format(self.file))
+                file_info.write("Number of molecules:   {}\n".format(number_of_mol))
+                file_info.write("Number of atoms:       {}\n".format(number_of_atoms))
+                file_info.write("Number of atoms type:  {}\n\n".format(len(atom_types_counting)))
+                file_info.write(tabulate(tab_of_atoms, headers=["Type", "Number", "%"]))
+                file_info.write("\n\n\n")
+        return set(atom_types)
 
 
 """

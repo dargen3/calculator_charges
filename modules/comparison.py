@@ -209,7 +209,7 @@ def statistics_for_molecules(dictionary, mol_into_log):
         list_with_max_deviation.append(data[0][1])
         list_with_average_deviation.append(data[0][2])
         list_with_pearson_2.append(data[0][3])
-        if mol_into_log is not None:
+        if mol_into_log:
             with open(mol_into_log, "a") as mol_log:
                 mol_log.write(str(key) + " " + str(data[0][0])[:5] + " " + str(data[0][1])[:5] + " " +
                               str(data[0][2])[:5] + " " + str(data[0][3])[:5] + "\n")
@@ -275,7 +275,7 @@ def comparison(charges, right_charges, args_save_fig, all_mol_to_log, rewriting_
     save_fig = charges[:-4] + ".png"
     control_if_arguments_files_exist_for_com(charges, right_charges, save_fig, args_save_fig,
                                              all_mol_to_log, rewriting_with_force)
-    if all_mol_to_log is not None:
+    if all_mol_to_log:
         with open(all_mol_to_log, "a") as mol_log:
             mol_log.write("name   rmsd   max.dev.   av.dev   pearson**2\n")
     logger.info("Loading data from {} and {} ...".format(charges, right_charges))
