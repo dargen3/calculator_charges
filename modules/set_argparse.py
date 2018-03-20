@@ -33,8 +33,6 @@ def settings_argparse():
     parser.add_argument("--method_parameterization",
                         help="It can be chosen minimize or guided_minimization.",
                         choices=("minimize", "guided_minimization"))
-    parser.add_argument("--alarm_after_para", action="store_true",
-                        help="Alarm after parameterization. You need instalated bash's play!")
     parser.add_argument("--make_html", action="store_true", help="Make html after comparison. Only for "
                                                                  "parameterization. You must choise --save_fig too.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity.")

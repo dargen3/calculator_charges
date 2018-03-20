@@ -10,11 +10,10 @@ import importlib
 from scipy.optimize import minimize, differential_evolution, basinhopping
 from numba import jit
 from scipy import stats
-from numpy import linalg, sqrt
+from numpy import linalg, sqrt, array, column_stack
 from math import isnan
 from .calculation import writing_to_list, writing_to_file
 from .make_html import make_html
-from .alarm import alarm
 from .comparison import control_if_arguments_files_exist_for_com, making_dictionary_with_charges_para, \
     statistics_for_all_atoms, plotting, making_final_list, statistics_for_molecules, statistics_for_atom_type
 from matplotlib import pyplot as plt
@@ -151,19 +150,20 @@ def write_to_para(parameters, sdf_input, method_par, choised_num_of_mol, table_f
         parameters.write("\n\n")
 
 
-@jit(nopython=True)
-def statistics(deviation_list):
-    rmsd_list = []
-    max_dev = 0
-    sum_of_dev = 0
-    for atom_data in deviation_list:
-        dev = atom_data[0] - atom_data[1]
-        abs_dev = abs(dev)
-        sum_of_dev += abs_dev
-        rmsd_list.append((dev) ** 2)
-        if abs_dev > max_dev:
-            max_dev = abs_dev
-    return rmsd_list, max_dev, sum_of_dev
+@jit(nopython=True, nogil=True, cache=True)
+def statistics(results, right_charges):
+    return (results - right_charges) ** 2
+
+
+@jit(nopython=True, cache=True)
+def rmsd_calculation(rmsd_list):
+    count = 0
+    suma = 0
+    for x in rmsd_list:
+        count += 1
+        suma += x
+    return sqrt((1.0 / count) * suma)
+
 
 
 def calculating_charges(list_of_parameters, method, set_of_molecule):
@@ -175,7 +175,8 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
             list_with_results.extend(method.calculate(molecule))
         except linalg.linalg.LinAlgError:
             pass
-    deviation_list = zip(list_with_results, method.right_charges_for_parametrization)
+    rmsd_list = statistics(array(list_with_results), method.right_charges_for_parametrization[:len(list_with_results)])
+    rmsd = rmsd_calculation(rmsd_list)
     atomic_types = sorted(method.atom_types_in_set)
     dict_with_right_charges_by_atom_type = {}
     for atom in atomic_types:
@@ -184,58 +185,38 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
     for x, result in enumerate(list_with_results):
         dict_with_right_charges_by_atom_type[all_atomic_types[x]].append(result)
     statistic_list_rmsd = [0] * len(atomic_types)
-    statistic_list_pear = [0] * len(atomic_types)
-    statistic_list_absd = [0] * len(atomic_types)
     for atom in atomic_types:
-        deviation_list_at = zip(dict_with_right_charges_by_atom_type[atom],
-                                method.right_charges_for_parameterization_by_atom_types(atom))
         try:
-            rmsd_list_at, max_dev_at, rubbish = statistics(list(deviation_list_at))
-        except ValueError:
-            print(list(deviation_list_at))
+            rmsd_list_at = statistics(array(dict_with_right_charges_by_atom_type[atom]), method.right_charges_for_parameterization_by_atom_types(atom)[:len(dict_with_right_charges_by_atom_type[atom])])
+        except IndexError:
             exit(colored("ERROR!!! This is few molecules for parameterization", "red"))
-        statistic_list_rmsd[atomic_types.index(atom)] = sqrt((1.0 / len(rmsd_list_at)) * sum(rmsd_list_at))
-        statistic_list_pear[atomic_types.index(atom)] = stats.pearsonr(dict_with_right_charges_by_atom_type[atom],
-                                                        method.right_charges_for_parameterization_by_atom_types(
-                                                        atom)[:len(dict_with_right_charges_by_atom_type[atom])])[0] ** 2
-        statistic_list_absd[atomic_types.index(atom)] = max_dev_at
+        statistic_list_rmsd[atomic_types.index(atom)] = rmsd_calculation(array(rmsd_list_at))
         greater_rmsd = max(statistic_list_rmsd)
-
-    rmsd_list, max_dev, sum_of_dev = statistics(list(deviation_list))
-    rmsd = sqrt((1.0 / len(rmsd_list)) * sum(rmsd_list))
-    if isnan(rmsd):
-        rmsd = 1000.0
-    if greater_rmsd and isnan(greater_rmsd):
+    if greater_rmsd and isnan(greater_rmsd) or isnan(rmsd):
         greater_rmsd = 1000.0
-    print("Actual RMSD: " + str(rmsd)[:8] + "   Actual max deviation: " + str(max_dev)[:8] + "   Worst RMSD: " +
-          str(greater_rmsd)[:8] + "   Worst pearson**2: " + str(min(statistic_list_pear))[:8], end="\r")
-    global prasarna  # smazat
-    prasarna = statistic_list_rmsd   # smazat
+    print("Total RMSD: " + str(rmsd)[:8] + "     Worst RMSD: " +
+          str(greater_rmsd)[:8], end="\r")
     return  greater_rmsd + rmsd + sum(statistic_list_rmsd) / len(statistic_list_rmsd)
 
 
-def local_minimization(input_parameters_list, bounds, method, set_of_molecule, maxiter=None):
-    if maxiter:
-        res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds,
-                   args=(method, set_of_molecule), options={"maxiter": maxiter})
-        return res.fun, res.x
+def local_minimization(input_parameters_list, bounds, method, set_of_molecule):
     res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds,
                    args=(method, set_of_molecule))
     fun1 = res.fun
     res = minimize(calculating_charges, res.x, method="SLSQP", bounds=bounds,
                    args=(method, set_of_molecule))
     fun2 = res.fun
-    while abs(fun1 - fun2) > 0.0000001:
+    while abs(fun1 - fun2) > 0.01:
         fun1 = fun2
         res = minimize(calculating_charges, res.x, method="SLSQP", bounds=bounds,
                        args=(method, set_of_molecule))
         fun2 = res.fun
-    return (fun2, res.x, prasarna)
+    return fun2, res.x
 
 
 def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, validation, right_charges,
                  method_parameterization, new_parameters, chg_output, all_mol_to_log, logger, rewriting_with_force,
-                 args_save_fig, args_make_html, alarm_after_para, cpu):
+                 args_save_fig, args_make_html, cpu):
     control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters,
                                              new_parameters, rewriting_with_force, chg_output)
 
@@ -296,65 +277,31 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
     for molecule in set_of_molecule:
         molecule.symbol_to_number(sorted_atomic_types, method.parameters_type)
         molecule.set_length_correction(method.length_correction)
-    original_bounds = bounds
     method.make_list_of_lists_of_parameters()
     print("Parameterization running for {} molecules ...\n".format(choised_num_of_mol))
     if method_parameterization == "guided_minimization":
-
-
-        for q in range(1):
-            samples = lhs(len(input_parameters_list), samples=len(input_parameters_list)*10, criterion="m")
-            for parameters_set in samples:
-                for index in range(len((parameters_set))):
-                    corection = abs(bounds[index][0] - bounds[index][1])
-                    corection_2 = bounds[index][0]
-                    parameters_set[index] = parameters_set[index] * corection + corection_2
-            sorted_samples = []
-            for pot in samples:
-                #res = local_minimization(pot, bounds, method, set_of_molecule, maxiter=1)
-                #sorted_samples.append((res[0], tuple(res[1])))
-                sorted_samples.append((calculating_charges(pot, method, set_of_molecule), tuple(pot)))
-            sorted_samples = sorted(sorted_samples, key=itemgetter(0))[:5]
-            #for x in sorted_samples:
-            #    plt.plot(x[1])
-            #plt.show()
-            bounds = [[] for x in range(len(input_parameters_list))]
-            for sample in sorted_samples:
-                for index, parameter in enumerate(sample[1]):
-                    bounds[index].append(parameter)
-            bounds = [[min(x), max(x)] for x in bounds]
-        num_of_samples = 2
-        sorted_samples = sorted_samples[:num_of_samples]
-        #plt.switch_backend('agg')  # smazat
-        plt.plot([x[0] for x in sorted_samples])  # smazat
+        samples = lhs(len(input_parameters_list), samples=len(input_parameters_list)*20, iterations=1000)
+        sorted_samples = []
+        from time import time
+        start_time = time()
+        for pot in samples:
+            sorted_samples.append((calculating_charges(pot, method, set_of_molecule), tuple(pot)))
+        sorted_samples = sorted(sorted_samples, key=itemgetter(0))[:3]
         op_data = []
-        rubbish_data = []  # smazat
         from multiprocessing import Pool
         from functools import partial
         pool = Pool(cpu)
-        partial_f = partial(local_minimization ,bounds=original_bounds, method=method, set_of_molecule=set_of_molecule)
+        partial_f = partial(local_minimization ,bounds=bounds, method=method, set_of_molecule=set_of_molecule)
         result = pool.map(partial_f, [par[1] for par in sorted_samples])
         for r in result:
-            rubbish_data.append(r[2])
             op_data.append((r[0], r[1]))
-        for x in range(len(rubbish_data)):  # smazat
-            plt.plot([y[x] for y in rubbish_data])   # smazat
-        plt.plot([x[0] for x in op_data])
-        name = "{}_{}.png".format(sdf_input.split("/")[-1][:-4], args_method)  # smazat
-        #plt.savefig(name) # smazat
         final_parameters = sorted(op_data, key=itemgetter(0))[0][1]
-        #for x in sorted_samples:
-        #    plt.plot(x[1])
-        #plt.plot(final_parameters, "ro")
-        plt.show()
-        from sys import exit
-        exit()
         method.load_parameters_from_list(final_parameters)
-
-
-
+        print("\n\n")
+        print(time() - start_time)
     elif method_parameterization in [None, "minimize"]:
         final_parameters = local_minimization(input_parameters_list, bounds, method, set_of_molecule)[1]
+    print("\n\n")
     writing_new_parameters(parameters, new_parameters, final_parameters, method)
     logger.info("\n\n\nFile with new parameters: \n---------------------------------------")
     logger.info(colored(open(new_parameters, 'r').read(), "yellow"))
@@ -427,7 +374,5 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
                   table_for_all_molecules[0], save_fig, atoms, statistics_data,
                   now.strftime("%Y-%m-%d %H:%M"), method_parameterization, choised_num_of_mol,
                   validation)
-    if alarm_after_para:
-        alarm()
     plotting(charges, right_charges, args_save_fig, save_fig,
              fig_all, fig, RMSD, pearson_2, axis_range, number_of_atoms)

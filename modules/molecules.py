@@ -5,7 +5,7 @@ from scipy import spatial
 import numpy as np
 
 
-@jit(nopython=True)
+@jit(nopython=True, nogil=True, cache=True)
 def bonded_atoms(index, set_of_bonds):
     bonded_atoms_list = []
     for bond in set_of_bonds:
@@ -16,7 +16,7 @@ def bonded_atoms(index, set_of_bonds):
     return bonded_atoms_list
 
 
-@jit(nopython=True)
+@jit(nopython=True, nogil=True, cache=True)
 def bond_type(index1, index2, bonds):
     if index2 < index1:
         index1, index2 = index2, index1

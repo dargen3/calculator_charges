@@ -111,7 +111,7 @@ class Arciclass:
                     exit(colored("File " + file + " with right charges is wrong! \n", "red"))
                 if len(ls) == 3:
                     list_with_right_charges.append(float(ls[2]))
-        self._list_with_right_charges = list_with_right_charges
+        self._list_with_right_charges = np.array(list_with_right_charges)
         all_atomic_types = []
         for molecule in set_of_molecules:
             all_atomic_types.extend(molecule.symbols(self.parameters_type))
@@ -122,6 +122,8 @@ class Arciclass:
             dict_with_right_charges_by_atom_type[str(atom)] = []
         for index, charge in enumerate(self._list_with_right_charges):
             dict_with_right_charges_by_atom_type[self._all_atomic_types[index]].append(charge)
+        for atom in atom_types_in_set:
+            dict_with_right_charges_by_atom_type[str(atom)] = np.array(dict_with_right_charges_by_atom_type[str(atom)])
         self.dict_with_right_charges_by_atom_type = dict_with_right_charges_by_atom_type
         self.atom_types_in_set = atom_types_in_set
 
@@ -137,10 +139,7 @@ class Arciclass:
         return self._all_atomic_types
 
     def right_charges_for_parameterization_by_atom_types(self, atom_type):
-        # try:
         return self.dict_with_right_charges_by_atom_type[str(atom_type)]
-        # except:
-        #    return False
 
     def get_key_in_parameters_gravity(self, i, molecule):
         return molecule.symbol_gravity(i)

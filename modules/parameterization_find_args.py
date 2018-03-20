@@ -33,7 +33,7 @@ def find_argumets_and_parameterize(path, logger, mode, method_parameterization_a
         method_parameterization = method_parameterization_args
     if mode == "parameterization_find_args":
         parameterize(method, parameters, sdf_file, num_of_par_mol, False, right_charges, method_parameterization, new_parameters,
-                     chg_output, None, logger, True, True, True, True, cpu)
+                     chg_output, None, logger, True, True, True, cpu)
     elif mode == "parameterization_send_meta":
         command = "./calculator_charges.py --mode parameterization --method {} --method_parameterization {} --parameters {} --sdf_input {} --right_charges {} " \
                   " --new_parameters {} --chg_output {} -f -v --make_html --save_fig --num_of_parameterized_mol {} --cpu {} > output.txt 2>&1"\
