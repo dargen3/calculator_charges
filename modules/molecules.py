@@ -89,16 +89,6 @@ class Molecule:
                             if self._atoms_types[bonded_atom-1] == searched_atom:
                                 symbol_gravity_bonded_atoms[index] = "{}~{}".format(self._symbol_gravity[index], searched_atom)
             self._atom_gravity_bonded_atoms = symbol_gravity_bonded_atoms
-        all_atomic_types = []
-        for index, atom in enumerate(self._symbol_gravity):
-            atomic_type = []
-            for bonded_atom in self._bonded_atoms[index + 1]:
-                atomic_type.append(self._symbol_gravity[bonded_atom - 1])
-            atomic_type_str = ""
-            for atomic_type in [atom] + sorted(atomic_type):
-                atomic_type_str = atomic_type_str + atomic_type
-            all_atomic_types.append(atomic_type_str)
-        self.all_atomic_types = all_atomic_types
 
     @property
     def c_bonded_atoms(self):
@@ -111,7 +101,7 @@ class Molecule:
     def symbol_gravity(self, index):
         return self._symbol_gravity[index-1]
 
-    def symbol_gravity(self, index):
+    def symbol_gravity_bonded_atoms(self, index):
         return self._atom_gravity_bonded_atoms[index-1]
 
     def symbol_to_number(self, atomic_types, type):
@@ -136,8 +126,6 @@ class Molecule:
             return self._symbol_gravity
         elif type == "atom~high_bond~bonded_atoms":
             return self._atom_gravity_bonded_atoms
-        elif type == "full_atom_type":
-            return self.all_atomic_types
 
     @property
     def symbol_grav(self):
@@ -183,18 +171,7 @@ class Molecule:
     def get_atom_type_with_idx(self, index):
         return self._atoms[index - 1].symbol
 
-    def get_full_atom_type_with_idx(self, index):
-        return self.all_atomic_types[index - 1]
-
-    def get_all_atom_types(self):
-        all_atomic_types = []
-        for index, atom in enumerate(self._symbol_gravity):
-            atomic_type = []
-            for bonded_atom in self._bonded_atoms[index+1]:
-                atomic_type.append(self._symbol_gravity[bonded_atom-1])
-            atomic_type_str = ""
-            for atomic_type in [atom]+sorted(atomic_type):
-                atomic_type_str = atomic_type_str + atomic_type
-            all_atomic_types.append(atomic_type_str)
-        return set(all_atomic_types)
-
+    def get_bond_type_between_atoms(self, atom1, atom2):
+        if atom1 > atom2:
+            atom1, atom2 = atom2, atom1
+        return self._bonds_types[self._bonds.index((atom1, atom2))]

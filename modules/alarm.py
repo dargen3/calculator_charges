@@ -7,5 +7,4 @@ def alarm():
     except KeyboardInterrupt:
         pass
     except CalledProcessError:
-        print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
         print(colored("You cannot run mp3 by bash command play!", "red"))

@@ -115,7 +115,6 @@ def make_complete_html(verbose):
     with open("data/index.html", "w") as html_file:
         html_file.write("<h1>Calculator charges</h1>\n")
         html_file.write("<h2>Source code: https://github.com/dargen3/calculator_charges</h2>\n")
-        html_file.write("<h2>Data:</h2>\n")
         html_file.write("<a href = \"data\">All data</a>\n<br />\n<br />\n<br />\n<br />\n")
         html_files = glob("data/*/*/*.html")
         methods_data_html = {}
@@ -134,12 +133,24 @@ def make_complete_html(verbose):
             if sdf_file not in sdf_files_check:
                 Set_of_molecule(sdf_file_path).statistics_data(write_to_file="data/sets_of_molecules_info/{}_info.txt".format(sdf_file[:-4]))
                 sdf_files_check.append(sdf_file)
-        sets_of_molecules = sorted(set(sets_of_molecules))
+        sets_int = []
+        sets_str = []
+        for setm in set(sets_of_molecules):
+            try:
+                sets_int.append(int(setm))
+            except ValueError:
+                sets_str.append(setm)
+        sets_of_molecules = [str(sets) for sets in sorted([seti for seti in sets_int])] + sorted(sets_str)
         html_file.write("<table border=1>\n")
         html_file.write("<tbody>\n")
         html_file.write("<th>Method</th>\n")
         for setm in sets_of_molecules:
             html_file.write("<th>{}</th>\n".format(setm))
+        html_file.write("</tr>\n")
+        names = {"500": "", "1956": "DTP_small", "4475": "DTP_large", "proteins": "", "8144": "CCD_gen_CHNO", "17769": "CCD_gen_all"}
+        html_file.write("<th>Name_of_set</th>\n")
+        for setm in sets_of_molecules:
+            html_file.write("<th>{}</th>\n".format(names[setm]))
         html_file.write("</tr>\n")
         html_file.write("<tr>\n")
         html_file.write("<td>Set of molecules info</td>")
@@ -164,8 +175,10 @@ def make_complete_html(verbose):
             html_file.write("</tr>\n")
         html_file.write("<tbody>\n")
         html_file.write("</table>\n")
+        html_file.write("\n<br />\n<br />\n<br /><a href = \"data/comparison/comparison.png\">Comparison of all avaiable parameterized sets and methods</a>")
         html_file.write("<br /><br /><br /><br /><h3>Contact: dargen3@centrum.cz</h3>\n")
         print("Copying of data...\n\n\n")
+    system("ssh dargen3@lcc.ncbr.muni.cz \" cd www/ ; rm -r data/ \"")
     system("scp -r  data dargen3@lcc.ncbr.muni.cz:/home/dargen3/www/")
     if verbose:
         print(colored("\n\n\nData was copied sucessfully.\n\n\n", "green"))

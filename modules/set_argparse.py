@@ -22,6 +22,7 @@ def settings_argparse():
     parser.add_argument("--right_charges", help="File with charges from QM.")
     parser.add_argument("--new_parameters", help="File to save parameters from parameterization.")
     parser.add_argument("--charges", help="File with charges.")
+    parser.add_argument("--cpu", help="Number of cpu for parameterization", type=int, default=1)
     parser.add_argument("--clusters", help="Number of cluster for mode clusterization.", type=int)
     parser.add_argument("--atom_type_for_clusterization", help="Atom type for clusterizing in format "
                                                                "atom~highest_bond (C~2).")
@@ -30,8 +31,8 @@ def settings_argparse():
     parser.add_argument("--validation", action="store_true",
                         help="From set of molecules will be 70% used for parameterization and 30% for validation.")
     parser.add_argument("--method_parameterization",
-                        help="It can be chosen minimize, basinhopping, diferential_evolution or combined.",
-                        choices=("minimize", "diferential_evolution", "basinhopping", "combined"))
+                        help="It can be chosen minimize or guided_minimization.",
+                        choices=("minimize", "guided_minimization"))
     parser.add_argument("--alarm_after_para", action="store_true",
                         help="Alarm after parameterization. You need instalated bash's play!")
     parser.add_argument("--make_html", action="store_true", help="Make html after comparison. Only for "

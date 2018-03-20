@@ -23,7 +23,7 @@ if __name__ == "__main__":
         parameterize(args.method, args.parameters, args.sdf_input, args.num_of_parameterized_mol, args.validation,
                      args.right_charges, args.method_parameterization, args.new_parameters, args.chg_output,
                      args.all_mol_to_log, logger, args.rewriting_with_force, args.save_fig, args.make_html,
-                     args.alarm_after_para)
+                     args.alarm_after_para, args.cpu)
 
     elif args.mode == "comparison":
         comparison(args.charges, args.right_charges, args.save_fig, args.all_mol_to_log, args.rewriting_with_force,
@@ -40,10 +40,10 @@ if __name__ == "__main__":
                    args.save_fig, args.fine_of_graph)
 
     elif args.mode == "parameterization_find_args":
-        find_argumets_and_parameterize(args.path, logger, args.mode, args.method_parameterization, args.num_of_parameterized_mol)
+        find_argumets_and_parameterize(args.path, logger, args.mode, args.method_parameterization, args.num_of_parameterized_mol, args.cpu)
 
     elif args.mode == "parameterization_send_meta":
-        find_argumets_and_parameterize(args.path, logger, args.mode, args.method_parameterization, args.num_of_parameterized_mol)
+        find_argumets_and_parameterize(args.path, logger, args.mode, args.method_parameterization, args.num_of_parameterized_mol, args.cpu)
 
     elif args.mode == "set_of_molecule_info":
         Set_of_molecule(args.sdf_input).statistics_data()
@@ -58,10 +58,3 @@ if __name__ == "__main__":
         for x in sorted(set(atom_types)):
             print("{} 1".format(x))
     print("\n")
-
-
-
-
-
-
-

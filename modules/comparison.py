@@ -142,7 +142,7 @@ def statistics_for_atom_type(atomic_symbol, list_with_atomic_data, atoms, fig_al
         name = "{}-{}".format(name_of_all_set, atomic_symbol)
         plt.savefig(name)
     colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", "#C0C0C0", "#800000",
-              "#008000", "#800080", "#008080", "#000080"] * 10
+              "#008000", "#800080", "#008080", "#000080"] * 1000
     fig_all.scatter(list_with_charges1, list_with_charges2, marker=".", color=colors[atoms.index(atomic_symbol)],
                     label=atomic_symbol)
     return [atomic_symbol, rmsd, max_deviation, average_deviation, person_2, len(list_with_atomic_data)]
