@@ -147,10 +147,13 @@ def make_complete_html(verbose):
         for setm in sets_of_molecules:
             html_file.write("<th>{}</th>\n".format(setm))
         html_file.write("</tr>\n")
-        names = {"500": "", "1956": "DTP_small", "4475": "DTP_large", "proteins": "", "8144": "CCD_gen_CHNO", "17769": "CCD_gen_all"}
+        names = {"1956": "DTP_small", "4475": "DTP_large", "proteins": "", "8144": "CCD_gen_CHNO", "17769": "CCD_gen_all"}
         html_file.write("<th>Name_of_set</th>\n")
         for setm in sets_of_molecules:
-            html_file.write("<th>{}</th>\n".format(names[setm]))
+            try:
+                html_file.write("<th>{}</th>\n".format(names[setm]))
+            except KeyError:
+                html_file.write("<th></th>\n")
         html_file.write("</tr>\n")
         html_file.write("<tr>\n")
         html_file.write("<td>Set of molecules info</td>")
@@ -175,15 +178,16 @@ def make_complete_html(verbose):
             html_file.write("</tr>\n")
         html_file.write("<tbody>\n")
         html_file.write("</table>\n")
-        html_file.write("\n<br />\n<br />\n<br /><a href = \"data/comparison/comparison.png\">Comparison of all avaiable parameterized sets and methods</a>")
         html_file.write("<br /><br /><br /><br /><h3>Contact: dargen3@centrum.cz</h3>\n")
         print("Copying of data...\n\n\n")
     system("ssh dargen3@lcc.ncbr.muni.cz \" cd www/ ; rm -r data/ \"")
+    system("ssh dargen3@lcc.ncbr.muni.cz \" cd www/ ; rm -r data_another/ \"")
     system("scp -r  data dargen3@lcc.ncbr.muni.cz:/home/dargen3/www/")
+    system("scp -r  data_another dargen3@lcc.ncbr.muni.cz:/home/dargen3/www/")
     if verbose:
         print(colored("\n\n\nData was copied sucessfully.\n\n\n", "green"))
         print("Setting permissions...")
-    system("scp -r  data/index.html dargen3@lcc.ncbr.muni.cz:/home/dargen3/www/")
+    #system("scp -r  data/index.html dargen3@lcc.ncbr.muni.cz:/home/dargen3/www/")
     system("ssh dargen3@lcc.ncbr.muni.cz \" mv www/data/index.html www/index.html ; chmod -R 705 * \"")
     if verbose:
         print(colored("Setting of permissions was sucessfull.\n\n\n", "green"))

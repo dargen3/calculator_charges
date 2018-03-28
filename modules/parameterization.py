@@ -7,10 +7,11 @@ from tempfile import NamedTemporaryFile
 from tabulate import tabulate
 from .set_of_molecule import Set_of_molecule
 import importlib
-from scipy.optimize import minimize, differential_evolution, basinhopping
+from scipy.optimize import minimize
 from numba import jit
 from scipy import stats
-from numpy import linalg, sqrt, array, column_stack
+from numpy import linalg, sqrt, array
+from numpy import array_split as npsplt
 from math import isnan
 from .calculation import writing_to_list, writing_to_file
 from .make_html import make_html
@@ -23,6 +24,8 @@ from pyDOE import lhs
 from matplotlib import pyplot as plt
 from operator import itemgetter
 from multiprocessing import Pool
+from functools import partial
+from itertools import chain
 
 def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters, new_parameters, force, chg_output):
     if not os.path.isfile(right_charges):
@@ -167,6 +170,8 @@ def rmsd_calculation(rmsd_list):
 
 
 def calculating_charges(list_of_parameters, method, set_of_molecule):
+    from time import time
+    start = time()
     method.load_parameters_from_list(list_of_parameters)
     method.make_list_of_lists_of_parameters()
     list_with_results = []
@@ -175,8 +180,13 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
             list_with_results.extend(method.calculate(molecule))
         except linalg.linalg.LinAlgError:
             pass
+    print("1",time()-start)
+    start = time()
     rmsd_list = statistics(array(list_with_results), method.right_charges_for_parametrization[:len(list_with_results)])
-    rmsd = rmsd_calculation(rmsd_list)
+    try:
+        rmsd = rmsd_calculation(rmsd_list)
+    except ZeroDivisionError:
+        return 1000.0
     atomic_types = sorted(method.atom_types_in_set)
     dict_with_right_charges_by_atom_type = {}
     for atom in atomic_types:
@@ -186,32 +196,32 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
         dict_with_right_charges_by_atom_type[all_atomic_types[x]].append(result)
     statistic_list_rmsd = [0] * len(atomic_types)
     for atom in atomic_types:
+        rmsd_list_at = statistics(array(dict_with_right_charges_by_atom_type[atom]), method.right_charges_for_parameterization_by_atom_types(atom)[:len(dict_with_right_charges_by_atom_type[atom])])
         try:
-            rmsd_list_at = statistics(array(dict_with_right_charges_by_atom_type[atom]), method.right_charges_for_parameterization_by_atom_types(atom)[:len(dict_with_right_charges_by_atom_type[atom])])
-        except IndexError:
-            exit(colored("ERROR!!! This is few molecules for parameterization", "red"))
-        statistic_list_rmsd[atomic_types.index(atom)] = rmsd_calculation(array(rmsd_list_at))
+            statistic_list_rmsd[atomic_types.index(atom)] = rmsd_calculation(array(rmsd_list_at))
+        except ZeroDivisionError:
+            return 1000.0
         greater_rmsd = max(statistic_list_rmsd)
     if greater_rmsd and isnan(greater_rmsd) or isnan(rmsd):
         greater_rmsd = 1000.0
-    print("Total RMSD: " + str(rmsd)[:8] + "     Worst RMSD: " +
-          str(greater_rmsd)[:8], end="\r")
+    print("2", time()-start)
+    from sys import exit
+    exit()
+    print("Total RMSD: " + str(rmsd)[:8] + "     Worst RMSD: " + str(greater_rmsd)[:8], end="\r")
     return  greater_rmsd + rmsd + sum(statistic_list_rmsd) / len(statistic_list_rmsd)
 
 
 def local_minimization(input_parameters_list, bounds, method, set_of_molecule):
     res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds,
-                   args=(method, set_of_molecule))
-    fun1 = res.fun
-    res = minimize(calculating_charges, res.x, method="SLSQP", bounds=bounds,
-                   args=(method, set_of_molecule))
-    fun2 = res.fun
-    while abs(fun1 - fun2) > 0.01:
-        fun1 = fun2
-        res = minimize(calculating_charges, res.x, method="SLSQP", bounds=bounds,
-                       args=(method, set_of_molecule))
-        fun2 = res.fun
-    return fun2, res.x
+                   args=(method, set_of_molecule,))
+    return res.fun, res.x
+
+
+def parallel_calculation_charges(samples, method, set_of_molecule):
+    sorted_samples = []
+    for pot in samples:
+        sorted_samples.append((calculating_charges(pot, method, set_of_molecule), tuple(pot)))
+    return sorted_samples
 
 
 def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, validation, right_charges,
@@ -271,25 +281,22 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
     elif args_method == "QEq":
         bounds = [(0.0001, 4)] * len(input_parameters_list)
     elif args_method == "SFKEEM":
-        bounds = [(0.0001, 4)] * len(input_parameters_list)
+        bounds = [(0.1, 4)] * len(input_parameters_list)
     else:
         bounds = [(-4, 4)] * len(input_parameters_list)
     for molecule in set_of_molecule:
         molecule.symbol_to_number(sorted_atomic_types, method.parameters_type)
         molecule.set_length_correction(method.length_correction)
     method.make_list_of_lists_of_parameters()
+    method.control_enough_atoms(set_of_molecule)
     print("Parameterization running for {} molecules ...\n".format(choised_num_of_mol))
     if method_parameterization == "guided_minimization":
-        samples = lhs(len(input_parameters_list), samples=len(input_parameters_list)*20, iterations=1000)
-        sorted_samples = []
-        from time import time
-        start_time = time()
-        for pot in samples:
-            sorted_samples.append((calculating_charges(pot, method, set_of_molecule), tuple(pot)))
+        samples = lhs(len(input_parameters_list), samples=len(input_parameters_list)*50, iterations=1000)
+        partial_f = partial(parallel_calculation_charges, method=method, set_of_molecule=set_of_molecule)
+        pool = Pool(cpu)
+        sorted_samples = list(chain.from_iterable(pool.map(partial_f, [x for x in npsplt(samples, cpu)])))
         sorted_samples = sorted(sorted_samples, key=itemgetter(0))[:3]
         op_data = []
-        from multiprocessing import Pool
-        from functools import partial
         pool = Pool(cpu)
         partial_f = partial(local_minimization ,bounds=bounds, method=method, set_of_molecule=set_of_molecule)
         result = pool.map(partial_f, [par[1] for par in sorted_samples])
@@ -297,8 +304,6 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
             op_data.append((r[0], r[1]))
         final_parameters = sorted(op_data, key=itemgetter(0))[0][1]
         method.load_parameters_from_list(final_parameters)
-        print("\n\n")
-        print(time() - start_time)
     elif method_parameterization in [None, "minimize"]:
         final_parameters = local_minimization(input_parameters_list, bounds, method, set_of_molecule)[1]
     print("\n\n")

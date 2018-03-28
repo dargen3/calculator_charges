@@ -58,7 +58,10 @@ class Molecule:
         self._corected_bonded_atoms = np.array([xi+[-1]*(length-len(xi)) for xi in self._bonded_atoms[1:]])
         list_of_highest_bond = []
         for x in list_of_all_bonds[1:]:
-            list_of_highest_bond.append(max(x))
+            try:
+                list_of_highest_bond.append(max(x))
+            except:
+                list_of_highest_bond.append(1)
         list_of_highest_bond.insert(0, 0)
         self._highest_bond_of_atoms = list_of_highest_bond
         symbol_gravity = []
@@ -70,7 +73,10 @@ class Molecule:
             for y in x:
                 list_of_bonded_atoms[index+1].extend(self._bonded_atoms[y])
             list_of_bonded_atoms[index+1] = list(set(list_of_bonded_atoms[index+1]))
-            list_of_bonded_atoms[index+1].remove(index+1)
+            try:
+                list_of_bonded_atoms[index+1].remove(index+1)
+            except:
+                pass
         self._bonded_bonded_atoms = list_of_bonded_atoms
         length = len(sorted(self._bonded_bonded_atoms[1:], key=len, reverse=True)[0])
         self._corected_bonded_bonded_atoms = np.array([xi+[-1]*(length-len(xi)) for xi in

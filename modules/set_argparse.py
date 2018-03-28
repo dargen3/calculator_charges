@@ -11,11 +11,12 @@ def settings_argparse():
                                        "set_of_molecule_info and clusterization.",
                         required=True, choices=("calculation", "parameterization", "comparison", "statistics",
                                                 "make_complete_html", "clusterization", "parameterization_find_args",
-                                                "set_of_molecule_info", "parameterization_send_meta", "experimental"))
+                                                "set_of_molecule_info", "parameterization_send_meta", "atoms_data"))
     parser.add_argument("--method", help="Method to calculating charges or for parameterization.")
     parser.add_argument("--path", help="For mode --parameterization_find_args")
     parser.add_argument("--sdf_input", help="Sdf file with molecules data.")
     parser.add_argument("--parameters", help="File with parameters.")
+    parser.add_argument("--time", help="How time take calculation in META (hours).", default=100)
     parser.add_argument("--fine_of_graph", help="For clusterization --cluster 0. Default is 0.1", type=float)
     parser.add_argument("--all_mol_to_log", help="For comparison. Results of all molecules are saved into log file.")
     parser.add_argument("--chg_output", help="Output chg file with charges.")
@@ -32,7 +33,7 @@ def settings_argparse():
                         help="From set of molecules will be 70% used for parameterization and 30% for validation.")
     parser.add_argument("--method_parameterization",
                         help="It can be chosen minimize or guided_minimization.",
-                        choices=("minimize", "guided_minimization"))
+                        choices=("minimize", "guided_minimization"), default="guided_minimization")
     parser.add_argument("--make_html", action="store_true", help="Make html after comparison. Only for "
                                                                  "parameterization. You must choise --save_fig too.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity.")

@@ -171,12 +171,30 @@ class Arciclass:
                         l_of_l[self.parameters_keys.index(y)].append(self.parameters[x])
         self.list_of_lists_of_parameters = np.array(l_of_l, dtype=np.float64)
 
+    def control_enough_atoms(self, set_of_molecule):
+        atomic_types = sorted(self.atom_types_in_set)
+        dict_with_right_charges_by_atom_type = {}
+        for atom in atomic_types:
+            dict_with_right_charges_by_atom_type[str(atom)] = 0
+        x=0
+        for molecule in set_of_molecule:
+            for atom in molecule._atoms:
+                dict_with_right_charges_by_atom_type[self.all_atomic_types[x]] += 1
+                x += 1
+        for atom in atomic_types:
+            if dict_with_right_charges_by_atom_type[str(atom)] == 0:
+                from pprint import pprint
+                pprint(dict_with_right_charges_by_atom_type)
+                exit(colored("ERROR!!! This is few molecules for parameterization! No atom of {} is in set!".format(atom), "red"))
+
+
 @jit(nopython=True, nogil=True, cache=True)
 def eem_calculate(num_of_atoms, kappa, matrix_of_distance, parameters_values, parameters_keys, formal_charge):
     matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
     vector = np.empty(num_of_atoms + 1, dtype=np.float64)
     #matrix[:num_of_atoms, :num_of_atoms] = kappa / matrix_of_distance
     ################################### mezi smazat
+
     for x in range(num_of_atoms):
         for y in range(num_of_atoms):
             dist = matrix_of_distance[x][y]
@@ -234,8 +252,14 @@ def sfkeem_calculate(num_of_atoms, sigma, parameters_values, parameters_keys, ma
         matrix[x, :-1] = matrix[x, :-1] * value
         matrix[:-1, x] = matrix[:-1, x] * value
         vector[x] = - parameters_values[symbol][0]
-    matrix[:num_of_atoms, :num_of_atoms] = 2.0 * np.sqrt(matrix[:num_of_atoms, :num_of_atoms]) * \
-                                           (1 / np.cosh(matrix_of_distance * sigma))
+    #matrix[:num_of_atoms, :num_of_atoms] = 2.0 * np.sqrt(matrix[:num_of_atoms, :num_of_atoms]) * 1 / np.cosh(matrix_of_distance * sigma)
+    for x in range(num_of_atoms):
+        for y in range(num_of_atoms):
+            value = 2.0 * np.sqrt(matrix[x, y]) * 1 / np.cosh(matrix_of_distance[x, y] * sigma) - 0.01
+            if value < 0:
+                matrix[x, y] = 0
+            else:
+                matrix[x, y] = value
     vector[-1] = formal_charge
     matrix[num_of_atoms, num_of_atoms] = 0.0
     results = np.linalg.solve(matrix, vector)
@@ -292,12 +316,12 @@ def qeq_calculate(num_of_atoms, matrix_of_distance, parameters_keys, parameters_
             distance = matrix_of_distance[i][j]
             #matrix[i][j] = matrix[j][i] = correlation * erf(np.sqrt(rad1 * rad2 / (rad1 + rad2)) * distance) / distance
             #####################
-            value = correlation * erf(np.sqrt(rad1 * rad2 / (rad1 + rad2)) * distance) / distance
-            if value < 0.01:
+            value = correlation * erf(np.sqrt(rad1 * rad2 / (rad1 + rad2)) * distance) / distance - 0.01
+            if value < 0:
                 matrix[i][j] = matrix[j][i] = 0
             else:
                 matrix[i][j] = matrix[j][i] = value
-            ##############š
+            ##############
     vector[-1] = formal_charge
     results = np.linalg.solve(matrix, vector)
     return results[:-1]
