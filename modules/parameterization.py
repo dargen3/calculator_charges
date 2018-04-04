@@ -153,13 +153,9 @@ def write_to_para(parameters, sdf_input, method_par, choised_num_of_mol, table_f
         parameters.write("\n\n")
 
 
-@jit(nopython=True, nogil=True, cache=True)
-def statistics(results, right_charges):
-    return (results - right_charges) ** 2
-
-
 @jit(nopython=True, cache=True)
-def rmsd_calculation(rmsd_list):
+def rmsd_calculation(results, right_charges):
+    rmsd_list = (results - right_charges) ** 2
     count = 0
     suma = 0
     for x in rmsd_list:
@@ -170,8 +166,6 @@ def rmsd_calculation(rmsd_list):
 
 
 def calculating_charges(list_of_parameters, method, set_of_molecule):
-    from time import time
-    start = time()
     method.load_parameters_from_list(list_of_parameters)
     method.make_list_of_lists_of_parameters()
     list_with_results = []
@@ -180,11 +174,9 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
             list_with_results.extend(method.calculate(molecule))
         except linalg.linalg.LinAlgError:
             pass
-    print("1",time()-start)
-    start = time()
-    rmsd_list = statistics(array(list_with_results), method.right_charges_for_parametrization[:len(list_with_results)])
     try:
-        rmsd = rmsd_calculation(rmsd_list)
+        rmsd = rmsd_calculation(array(list_with_results),
+                                                     method.right_charges_for_parametrization[:len(list_with_results)])
     except ZeroDivisionError:
         return 1000.0
     atomic_types = sorted(method.atom_types_in_set)
@@ -194,26 +186,28 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
     all_atomic_types = method.all_atomic_types
     for x, result in enumerate(list_with_results):
         dict_with_right_charges_by_atom_type[all_atomic_types[x]].append(result)
-    statistic_list_rmsd = [0] * len(atomic_types)
+    partial_rmsd = [0] * len(atomic_types)
     for atom in atomic_types:
-        rmsd_list_at = statistics(array(dict_with_right_charges_by_atom_type[atom]), method.right_charges_for_parameterization_by_atom_types(atom)[:len(dict_with_right_charges_by_atom_type[atom])])
         try:
-            statistic_list_rmsd[atomic_types.index(atom)] = rmsd_calculation(array(rmsd_list_at))
+            partial_rmsd[atomic_types.index(atom)] = rmsd_calculation(
+                array(dict_with_right_charges_by_atom_type[atom]),
+                method.right_charges_for_parameterization_by_atom_types(atom)[
+                :len(dict_with_right_charges_by_atom_type[atom])])
         except ZeroDivisionError:
             return 1000.0
-        greater_rmsd = max(statistic_list_rmsd)
+
+
+    greater_rmsd = max(partial_rmsd)
     if greater_rmsd and isnan(greater_rmsd) or isnan(rmsd):
         greater_rmsd = 1000.0
-    print("2", time()-start)
-    from sys import exit
-    exit()
+
     print("Total RMSD: " + str(rmsd)[:8] + "     Worst RMSD: " + str(greater_rmsd)[:8], end="\r")
-    return  greater_rmsd + rmsd + sum(statistic_list_rmsd) / len(statistic_list_rmsd)
+    return  greater_rmsd + rmsd + sum(partial_rmsd) / len(partial_rmsd)
 
 
 def local_minimization(input_parameters_list, bounds, method, set_of_molecule):
     res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds,
-                   args=(method, set_of_molecule,))
+                   args=(method, set_of_molecule,), options={"disp":True, "ftol":0.000001}) #zjistit!
     return res.fun, res.x
 
 
@@ -293,13 +287,13 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
     if method_parameterization == "guided_minimization":
         samples = lhs(len(input_parameters_list), samples=len(input_parameters_list)*50, iterations=1000)
         partial_f = partial(parallel_calculation_charges, method=method, set_of_molecule=set_of_molecule)
-        pool = Pool(cpu)
-        sorted_samples = list(chain.from_iterable(pool.map(partial_f, [x for x in npsplt(samples, cpu)])))
+        with Pool(cpu) as pool:
+            sorted_samples = list(chain.from_iterable(pool.map(partial_f, [x for x in npsplt(samples, cpu)])))
         sorted_samples = sorted(sorted_samples, key=itemgetter(0))[:3]
         op_data = []
-        pool = Pool(cpu)
         partial_f = partial(local_minimization ,bounds=bounds, method=method, set_of_molecule=set_of_molecule)
-        result = pool.map(partial_f, [par[1] for par in sorted_samples])
+        with Pool(cpu) as pool:
+            result = pool.map(partial_f, [par[1] for par in sorted_samples])
         for r in result:
             op_data.append((r[0], r[1]))
         final_parameters = sorted(op_data, key=itemgetter(0))[0][1]

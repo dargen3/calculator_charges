@@ -10,6 +10,7 @@ from modules.make_html import make_complete_html
 from modules.set_argparse import settings_argparse
 from modules.parameterization_find_args import find_argumets_and_parameterize
 from modules.set_of_molecule import Set_of_molecule
+from modules.new_set import new_set
 
 if __name__ == "__main__":
     args, logger = settings_argparse()
@@ -48,7 +49,13 @@ if __name__ == "__main__":
     elif args.mode == "set_of_molecule_info":
         Set_of_molecule(args.sdf_input).statistics_data()
 
+    elif args.mode == "new_set":
+        new_set(args.path, args.right_charges, args.sdf_input, args.parameters)
+
+
     elif args.mode == "atoms_data":
+        from numpy import array
+        from math import sqrt
         with open(args.right_charges, "r") as right_charges_file:
             list_with_right_charges = []
             for line in right_charges_file:
@@ -87,3 +94,6 @@ if __name__ == "__main__":
                     atom.chg_BBA += molecule._atoms[bbbb-1].charge
                 a = atom
                 print("{},{},{},{},{},{},{}".format(a.symbol, a.charge, a.highest_bond, round(a.el_BA/a.num_of_BA,4), round(a.chg_BA/a.num_of_BA, 4), round(a.el_BBA/a.num_of_BBA,4), round(a.chg_BBA/a.num_of_BBA, 4)))
+
+
+

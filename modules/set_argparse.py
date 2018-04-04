@@ -11,7 +11,7 @@ def settings_argparse():
                                        "set_of_molecule_info and clusterization.",
                         required=True, choices=("calculation", "parameterization", "comparison", "statistics",
                                                 "make_complete_html", "clusterization", "parameterization_find_args",
-                                                "set_of_molecule_info", "parameterization_send_meta", "atoms_data"))
+                                                "set_of_molecule_info", "parameterization_send_meta", "atoms_data", "new_set"))
     parser.add_argument("--method", help="Method to calculating charges or for parameterization.")
     parser.add_argument("--path", help="For mode --parameterization_find_args")
     parser.add_argument("--sdf_input", help="Sdf file with molecules data.")
@@ -64,6 +64,9 @@ def settings_argparse():
     elif args.mode == "set_of_molecule_info":
         if args.sdf_input is None:
             parser.error("For set of molecule info must be choisen --sdf_input!")
+    elif args.mode == "new_set":
+        if args.sdf_input is None or args.right_charges is None or args.path is None or args.parameters is None:
+            parser.error("For new set creation must be choisen --sdf_input, --right_charges, --parameters, --path!")
     elif args.mode == "parameterization_find_args":
         if args.path is None:
             parser.error("For parameterization_find_args must be choisen --path!")
