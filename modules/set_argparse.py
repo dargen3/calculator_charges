@@ -16,13 +16,15 @@ def settings_argparse():
     parser.add_argument("--path", help="For mode --parameterization_find_args")
     parser.add_argument("--sdf_input", help="Sdf file with molecules data.")
     parser.add_argument("--parameters", help="File with parameters.")
-    parser.add_argument("--time", help="How time take calculation in META (hours).", default=100)
+    parser.add_argument("--send_modules", help="For send to meta all modules.", default=False, action="store_true")
+    parser.add_argument("--time", help="How time take calculation in META (hours).", default=10)
     parser.add_argument("--fine_of_graph", help="For clusterization --cluster 0. Default is 0.1", type=float)
     parser.add_argument("--all_mol_to_log", help="For comparison. Results of all molecules are saved into log file.")
     parser.add_argument("--chg_output", help="Output chg file with charges.")
     parser.add_argument("--right_charges", help="File with charges from QM.")
     parser.add_argument("--new_parameters", help="File to save parameters from parameterization.")
     parser.add_argument("--charges", help="File with charges.")
+    parser.add_argument("--type_of_atoms", help="Type of atoms for comparison.")
     parser.add_argument("--cpu", help="Number of cpu for parameterization", type=int, default=1)
     parser.add_argument("--clusters", help="Number of cluster for mode clusterization.", type=int)
     parser.add_argument("--atom_type_for_clusterization", help="Atom type for clusterizing in format "
@@ -71,8 +73,8 @@ def settings_argparse():
         if args.path is None:
             parser.error("For parameterization_find_args must be choisen --path!")
     elif args.mode == "parameterization_send_meta":
-        if args.path is None:
-            parser.error("For parameterization_send_meta must be choisen --path and --method_parameterization!")
+        if args.path is None or args.cpu is None:
+            parser.error("For parameterization_send_meta must be choisen --path and --method_parameterization and --cpu!")
     if args.verbose:
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)

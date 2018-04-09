@@ -5,12 +5,13 @@ from modules.set_of_molecule import Set_of_molecule
 
 
 def make_html(name, sdf, method, all_atoms, all_molecules, fig_all, atomic_types, atomic_types_data, time, method_para,
-              num_of_par_mol, validation):
+              num_of_par_mol, validation, time_of_parameterization):
     name = name + ".html"
     with open(name, "w") as html_file:
         html_file.write("<h1>Method: {0}</h1>\n".format(method))
         html_file.write("<h1>Set of molecules: {0}</h1>\n".format(sdf))
         html_file.write("<h1>Date of parameterization: {0}</h1>\n".format(time))
+        html_file.write("<h1>Time of parameterization: {0}</h1>\n".format(time_of_parameterization))
         html_file.write("<h1>Method of parameterization: {0}</h1>\n".format(method_para))
         html_file.write("<h1>Number of parameterized molecules: {0}</h1>\n".format(num_of_par_mol))
         if validation:

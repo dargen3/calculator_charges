@@ -30,6 +30,8 @@ def find_argumets_and_parameterize(path, logger, mode, method_parameterization_a
         parameterize(method, parameters, sdf_file, num_of_par_mol, False, right_charges, method_parameterization, new_parameters,
                      chg_output, None, logger, True, True, True, cpu)
     elif mode == "parameterization_send_meta":
+        if method_parameterization == "guided_minimization":
+            cpu = 3
         command = "./calculator_charges.py --mode parameterization --method {} --method_parameterization {} --parameters {} --sdf_input {} --right_charges {} " \
                   " --new_parameters {} --chg_output {} -f -v --make_html --save_fig --cpu {} > output.txt 2>&1"\
             .format(method, method_parameterization, parameters.split("/")[-1], sdf_file.split("/")[-1], right_charges.split("/")[-1], new_parameters, chg_output, cpu)

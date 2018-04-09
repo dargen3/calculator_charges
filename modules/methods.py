@@ -187,26 +187,23 @@ class Arciclass:
                 pprint(dict_with_right_charges_by_atom_type)
                 exit(colored("ERROR!!! This is few molecules for parameterization! No atom of {} is in set!".format(atom), "red"))
 
+    def num_of_atoms_in_set(self, set_of_molecule):
+        atomic_types = sorted(self.atom_types_in_set)
+        self.dict_with_counts_by_atom_type = {"total": 0}
+        for atom in atomic_types:
+            self.dict_with_right_charges_by_atom_type[str(atom)] = 0
+        for molecule in set_of_molecule:
+            for symbol in molecule.symbols(self.parameters_type):
+                self.dict_with_counts_by_atom_type["total"] += 1
+                self.dict_with_counts_by_atom_type[symbol] += 1
 
-@jit(nopython=True, nogil=True, cache=True)
+
+
+@jit(nopython=True, cache=True)
 def eem_calculate(num_of_atoms, kappa, matrix_of_distance, parameters_values, parameters_keys, formal_charge):
     matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
     vector = np.empty(num_of_atoms + 1, dtype=np.float64)
-    #matrix[:num_of_atoms, :num_of_atoms] = kappa / matrix_of_distance
-    ################################### mezi smazat
-
-    for x in range(num_of_atoms):
-        for y in range(num_of_atoms):
-            dist = matrix_of_distance[x][y]
-            if dist == 0:
-                value = 0
-            else:
-                value = kappa / dist - 0.01
-            if value < 0:
-                matrix[x][y] = 0
-            else:
-                matrix[x][y] = value
-    ########################################  mezi smazat
+    matrix[:num_of_atoms, :num_of_atoms] = kappa / matrix_of_distance
     matrix[num_of_atoms, :] = 1.0
     matrix[:, num_of_atoms] = 1.0
     matrix[num_of_atoms, num_of_atoms] = 0.0
@@ -240,6 +237,41 @@ class EEM(Arciclass):
         vector[-1] = molecule.formal_charge
         results = np.linalg.solve(matrix, vector)
         return results[:-1]
+
+
+@jit(nopython=True, cache=True)
+def eem_calculate_cutoff(num_of_atoms, kappa, matrix_of_distance, parameters_values, parameters_keys, formal_charge):
+    matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
+    vector = np.empty(num_of_atoms + 1, dtype=np.float64)
+    cut_off = kappa / 5
+    for x in range(num_of_atoms):
+        for y in range(num_of_atoms):
+            dist = matrix_of_distance[x][y]
+            if dist == 0:
+                continue
+            else:
+                value = kappa / dist - cut_off
+            if value < 0:
+                matrix[x][y] = 0
+            else:
+                matrix[x][y] = value
+    matrix[num_of_atoms, :] = 1.0
+    matrix[:, num_of_atoms] = 1.0
+    matrix[num_of_atoms, num_of_atoms] = 0.0
+    for i in range(num_of_atoms):
+        symbol = parameters_keys[i]
+        matrix[i][i] = parameters_values[symbol][1]
+        vector[i] = -parameters_values[symbol][0]
+    vector[-1] = formal_charge
+    results = np.linalg.solve(matrix, vector)
+    return results[:-1]
+
+
+class EEMcutoff(Arciclass):
+    def calculate(self, molecule):
+        return eem_calculate_cutoff(len(molecule), self.get_parameter("kappa"), molecule.matrix_of_distance,
+                             self.list_of_lists_of_parameters, molecule.s_numbers, molecule.formal_charge)
+
 
 
 @jit(nopython=True, nogil=True, cache=True)
@@ -354,3 +386,41 @@ class QEq(Arciclass):
         vector[-1] = molecule.formal_charge
         results = np.linalg.solve(matrix, vector)
         return results[:-1]
+
+
+
+
+
+class EEE(Arciclass):
+    def calculate(self, molecule):
+        num_of_atoms = len(molecule)
+        matrix = np.zeros((num_of_atoms + 1, num_of_atoms + 1), dtype=float)
+        vector = np.zeros(shape=[num_of_atoms + 1], dtype=float)
+        matrix[num_of_atoms, : -1] = 1.0
+        matrix[-1: num_of_atoms] = 1.0
+
+        vector[-1] = molecule.formal_charge
+        matrix[:num_of_atoms, :num_of_atoms] = self.get_parameter("kappa") / molecule.matrix_of_distance
+
+        for x in range(num_of_atoms):
+            chg = -1
+            for y in range(num_of_atoms):
+                if x != y:
+                    distance = molecule.matrix_of_distance[x][y]
+                    chg += 1/distance
+                    matrix[x][y] = 1/distance
+            matrix[x][x] = chg
+
+        for z in range(1, num_of_atoms + 1):
+            symbol_z = self.symbol(z, molecule)
+            el = 0
+            for i in range(1, num_of_atoms + 1):
+                if z != i:
+                    symbol_i = self.symbol(i, molecule)
+                    el += (self.get_parameter(symbol_z + "~el") - self.get_parameter(symbol_i + "~el"))/molecule.matrix_of_distance[z-1][i-1]
+            vector[z-1] = -el
+        print(matrix)
+        from sys import exit
+        #exit()
+        results = np.linalg.solve(matrix, vector)
+        return results

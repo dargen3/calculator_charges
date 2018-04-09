@@ -269,7 +269,7 @@ def control_if_arguments_files_exist_for_com(charges1, charges2, save_fig, save_
         pass
 
 
-def comparison(charges, right_charges, args_save_fig, all_mol_to_log, rewriting_with_force, logger):
+def comparison(sdf_input, charges, right_charges, args_save_fig, all_mol_to_log, rewriting_with_force, logger):
     fig = plt.figure(figsize=(11, 9))
     fig_all = fig.add_subplot(111)
     save_fig = charges[:-4] + ".png"
@@ -279,8 +279,19 @@ def comparison(charges, right_charges, args_save_fig, all_mol_to_log, rewriting_
         with open(all_mol_to_log, "a") as mol_log:
             mol_log.write("name   rmsd   max.dev.   av.dev   pearson**2\n")
     logger.info("Loading data from {} and {} ...".format(charges, right_charges))
-    char2 = making_dictionary_with_charges(charges)
-    char1 = making_dictionary_with_charges(right_charges)
+    if sdf_input:
+        from .set_of_molecule import Set_of_molecule
+        setm = Set_of_molecule(sdf_input)
+        number_of_molecules = len(setm)
+        set_of_molecule = setm[:number_of_molecules]
+        all_atomic_types = []
+        for molecule in set_of_molecule:
+            all_atomic_types.extend(molecule.symbols("atom~high_bond"))
+        char2 = making_dictionary_with_charges_para(charges, all_atomic_types)
+        char1 = making_dictionary_with_charges_para(right_charges, all_atomic_types)
+    else:
+        char2 = making_dictionary_with_charges(charges)
+        char1 = making_dictionary_with_charges(right_charges)
     list_with_atomic_data, dict_with_atomic_data, dictionary_with_molecular_data, atoms = making_final_list(char1,
                                                                                                             char2)
     logger.info(

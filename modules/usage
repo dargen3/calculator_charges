@@ -1,7 +1,16 @@
+
+
+for x in data/EEM/*/ ; do ./calculator_charges.py --mode parameterization_send_meta --path $x ; done
+
+for x in 2018_04_09_14_* ; do mv $x/*  data/$(cut -d'_' -f7 <<< $x)/$(cut -d'_' -f8 <<< $x)/  ; done
+
 /calculator_charges.py --mode parameterization --parameters parameters/par_EFM_best.txt --sdf_input structures/set01.sdf --right_charges charges/set01.chg --method EFM --new_parameters parameters/par_pok11111 --chg_output naboje_smazat --comparison_after_par --save_fig obrazek -v
 
-all global parameters must begin by small letter
 
+
+
+all global parameters must begin by small letter
+data/EEM/name-of-set nesmi byt s _
 
 
 
@@ -16,5 +25,4 @@ while results are satisfactory:
 (if results are good:
 	write an article!
 else:
-	cry and try it again)
-	
+	cry and try it again!	

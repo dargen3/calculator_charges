@@ -26,6 +26,7 @@ from operator import itemgetter
 from multiprocessing import Pool
 from functools import partial
 from itertools import chain
+from time import time
 
 def control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters, new_parameters, force, chg_output):
     if not os.path.isfile(right_charges):
@@ -178,7 +179,7 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
         rmsd = rmsd_calculation(array(list_with_results),
                                                      method.right_charges_for_parametrization[:len(list_with_results)])
     except ZeroDivisionError:
-        return 1000.0
+        rmsd = 1000
     atomic_types = sorted(method.atom_types_in_set)
     dict_with_right_charges_by_atom_type = {}
     for atom in atomic_types:
@@ -187,6 +188,7 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
     for x, result in enumerate(list_with_results):
         dict_with_right_charges_by_atom_type[all_atomic_types[x]].append(result)
     partial_rmsd = [0] * len(atomic_types)
+    greater_rmsd = False
     for atom in atomic_types:
         try:
             partial_rmsd[atomic_types.index(atom)] = rmsd_calculation(
@@ -194,20 +196,18 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
                 method.right_charges_for_parameterization_by_atom_types(atom)[
                 :len(dict_with_right_charges_by_atom_type[atom])])
         except ZeroDivisionError:
-            return 1000.0
-
-
-    greater_rmsd = max(partial_rmsd)
+            greater_rmsd = 1000.0
+    if not greater_rmsd:
+        greater_rmsd = max(partial_rmsd)
     if greater_rmsd and isnan(greater_rmsd) or isnan(rmsd):
         greater_rmsd = 1000.0
-
     print("Total RMSD: " + str(rmsd)[:8] + "     Worst RMSD: " + str(greater_rmsd)[:8], end="\r")
     return  greater_rmsd + rmsd + sum(partial_rmsd) / len(partial_rmsd)
 
 
 def local_minimization(input_parameters_list, bounds, method, set_of_molecule):
     res = minimize(calculating_charges, input_parameters_list, method="SLSQP", bounds=bounds,
-                   args=(method, set_of_molecule,), options={"disp":True, "ftol":0.000001}) #zjistit!
+                   args=(method, set_of_molecule,))
     return res.fun, res.x
 
 
@@ -223,7 +223,7 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
                  args_save_fig, args_make_html, cpu):
     control_if_arguments_files_exist_for_par(right_charges, sdf_input, parameters,
                                              new_parameters, rewriting_with_force, chg_output)
-
+    start = datetime.datetime.now()
     statistics_sdf_and_chg_file(right_charges, sdf_input, logger)
     try:
         method = getattr(importlib.import_module("modules.methods"), args_method)
@@ -283,22 +283,33 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
         molecule.set_length_correction(method.length_correction)
     method.make_list_of_lists_of_parameters()
     method.control_enough_atoms(set_of_molecule)
+    #method.num_of_atoms_in_set(set_of_molecule)
     print("Parameterization running for {} molecules ...\n".format(choised_num_of_mol))
     if method_parameterization == "guided_minimization":
         samples = lhs(len(input_parameters_list), samples=len(input_parameters_list)*50, iterations=1000)
-        partial_f = partial(parallel_calculation_charges, method=method, set_of_molecule=set_of_molecule)
-        with Pool(cpu) as pool:
-            sorted_samples = list(chain.from_iterable(pool.map(partial_f, [x for x in npsplt(samples, cpu)])))
+        if cpu != 1:
+            partial_f = partial(parallel_calculation_charges, method=method, set_of_molecule=set_of_molecule)
+            with Pool(cpu) as pool:
+                sorted_samples = list(chain.from_iterable(pool.map(partial_f, [x for x in npsplt(samples, cpu)])))
+        else:
+            sorted_samples = parallel_calculation_charges(samples, method, set_of_molecule)
         sorted_samples = sorted(sorted_samples, key=itemgetter(0))[:3]
         op_data = []
-        partial_f = partial(local_minimization ,bounds=bounds, method=method, set_of_molecule=set_of_molecule)
-        with Pool(cpu) as pool:
-            result = pool.map(partial_f, [par[1] for par in sorted_samples])
+        if cpu != 1:
+            partial_f = partial(local_minimization, bounds=bounds, method=method, set_of_molecule=set_of_molecule)
+            with Pool(cpu) as pool:
+                result = pool.map(partial_f, [par[1] for par in sorted_samples])
+        else:
+            result = []
+            for par in sorted_samples:
+                result.append(local_minimization(par[1], bounds, method, set_of_molecule))
         for r in result:
             op_data.append((r[0], r[1]))
         final_parameters = sorted(op_data, key=itemgetter(0))[0][1]
         method.load_parameters_from_list(final_parameters)
     elif method_parameterization in [None, "minimize"]:
+        if cpu != 1:
+            exit(colored("Local minimization can not be parallelized!", "red"))
         final_parameters = local_minimization(input_parameters_list, bounds, method, set_of_molecule)[1]
     print("\n\n")
     writing_new_parameters(parameters, new_parameters, final_parameters, method)
@@ -367,11 +378,13 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
                   table_for_all_molecules, statistics_data, now, validation)
     print(tabulate(statistics_data, headers=["atomic type", "RMSD", "max deviation", "average deviation",
                                              "pearson**2", "num. of atoms"]))
+    time_of_parameterization = str(now-start)[0:-7]
+    print("\n\n\n\nTime of parameterization: {}".format(time_of_parameterization))
     print("\n\n\n")
     if args_make_html:
         make_html(charges[:-4], sdf_input, method, table_for_all_atoms[0],
                   table_for_all_molecules[0], save_fig, atoms, statistics_data,
                   now.strftime("%Y-%m-%d %H:%M"), method_parameterization, choised_num_of_mol,
-                  validation)
+                  validation, time_of_parameterization)
     plotting(charges, right_charges, args_save_fig, save_fig,
              fig_all, fig, RMSD, pearson_2, axis_range, number_of_atoms)

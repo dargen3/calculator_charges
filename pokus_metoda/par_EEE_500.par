@@ -1,0 +1,54 @@
+method: EEE
+length_type: Angstrom
+<<global>>
+kappa 0.0108
+<<key>>
+atom
+high_bond
+<<value_symbol>>
+el
+beta
+<<value>>
+C   1   0.7145   0.014   
+C   2   0.7146   0.0127   
+H   1   0.7113   0.0222   
+N   1   0.723   0.0215   
+N   2   0.7171   0.0132   
+O   1   1.7244   1.7067   
+O   2   1.9361   1.9642   
+S   1   0.4638   1.0597   
+S   2   0.7144   0.0081   
+<<end>>
+
+
+
+
+Parameterized set of molecules: 500.sdf
+Date of parameterization: 2017-12-07 20:18
+Method of parameterization: combined
+Number of parameterized molecules: 20
+Mode: Full set parameterization
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson**2    num. of atoms
+---------  ---------------  -------------------  ------------  ---------------
+0.0724494         0.417818            0.0527593      0.963483            16168
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson**2    num. of molecules
+---------  ---------------  -------------------  ------------  -------------------
+0.0718305         0.194096              0.05436      0.966044                  500
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson**2    num. of atoms
+-------------  ---------  ---------------  -------------------  ------------  ---------------
+C~1            0.0758761         0.368918            0.0589705      0.891535             2159
+C~2            0.0912907         0.360358            0.0719142      0.941735             4227
+H~1            0.0398902         0.235099            0.0305946      0.726558             7456
+N~1            0.0866578         0.282871            0.0677241      0.648836              527
+N~2            0.114834          0.417818            0.0887727      0.936096              389
+O~1            0.124196          0.254332            0.112059       0.617226              651
+O~2            0.0759477         0.247831            0.0585239      0.62603               627
+S~1            0.107058          0.282264            0.0783522      0.594906               60
+S~2            0.16287           0.399101            0.125419       0.967682               72
+
