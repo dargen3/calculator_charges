@@ -195,15 +195,14 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
             count += fill_array(list_with_results, method.calculate(molecule), count)
         except linalg.linalg.LinAlgError:
             pass
+        except ZeroDivisionError:
+            return 1000
     try:
         rmsd = rmsd_calculation(list_with_results, method.right_charges_for_parametrization[:len(list_with_results)])
     except ZeroDivisionError:
         rmsd = 1000
     data = part_statistics(method.counts_atoms_c, list_with_results, method.molecules_s_numbers, method.dict_with_counts_by_atom_type["total"])
     partial_rmsd = [0] * len(method.counts_atoms_c)
-    greater_rmsd = False
-
-
     for s in range(len(method.counts_atoms_c)):
         try:
             data_part = data[method.counts_atoms_c[s]:method.counts_atoms_c[s+1]]
@@ -212,16 +211,15 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
         try:
             partial_rmsd[s] = rmsd_calculation(data_part, method.right_charges_for_parameterization_by_atom_types(method.parameters_keys[s])[:len(data_part)])
         except ZeroDivisionError:
-            greater_rmsd = 1000.0
+            return 1000.0
 
 
 
-    if not greater_rmsd:
-        greater_rmsd = max(partial_rmsd)
-    if greater_rmsd and isnan(greater_rmsd) or isnan(rmsd):
-        greater_rmsd = 1000.0
+    greater_rmsd = max(partial_rmsd)
+    if isnan(greater_rmsd) or isnan(rmsd):
+        return 1000.0
     print("Total RMSD: " + str(rmsd)[:8] + "     Worst RMSD: " + str(greater_rmsd)[:8], end="\r")
-    return  greater_rmsd + rmsd + sum(partial_rmsd) / len(partial_rmsd)
+    return greater_rmsd + rmsd + sum(partial_rmsd) / len(partial_rmsd)
 
 
 def local_minimization(input_parameters_list, bounds, method, set_of_molecule):

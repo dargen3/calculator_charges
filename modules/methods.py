@@ -282,7 +282,7 @@ class EEMcutoff(Arciclass):
 
 
 
-@jit(nopython=True, nogil=True, cache=True)
+@jit(nopython=True, cache=True)
 def sfkeem_calculate(num_of_atoms, sigma, parameters_values, parameters_keys, matrix_of_distance, formal_charge):
     matrix = np.ones((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
     vector = np.empty(num_of_atoms + 1, dtype=np.float64)
@@ -322,7 +322,7 @@ class SFKEEM(Arciclass):
         results = np.linalg.solve(matrix, vector)
         return results[:-1]
 
-@jit(nopython=True, nogil=True, cache=True)
+@jit(nopython=True, cache=True)
 def sfkeem_calculate_cut_off(num_of_atoms, sigma, parameters_values, parameters_keys, matrix_of_distance, formal_charge):
     matrix = np.ones((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
     vector = np.empty(num_of_atoms + 1, dtype=np.float64)
@@ -357,7 +357,7 @@ def coulomb_integral(cor, rad_1, rad_2, distance):
     return cor * erf(np.sqrt(rad_1 * rad_2 / (rad_1 + rad_2)) * distance) / distance
 
 
-@jit(nopython=True, nogil=True, cache=True)
+@jit(nopython=True, cache=True)
 def qeq_calculate(num_of_atoms, matrix_of_distance, parameters_keys, parameters_values, correlation, formal_charge):
     matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
     vector = np.empty(num_of_atoms + 1, dtype=np.float64)
@@ -413,7 +413,7 @@ class QEq(Arciclass):
 
 
 
-@jit(nopython=True, nogil=True, cache=True)
+@jit(nopython=True, cache=True)
 def qeq_calculate_cut_off(num_of_atoms, matrix_of_distance, parameters_keys, parameters_values, correlation, formal_charge):
     matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
     vector = np.empty(num_of_atoms + 1, dtype=np.float64)
@@ -499,9 +499,8 @@ def eee(num_of_atoms, matrix_of_distance, parameters_keys, parameters_values, ka
                 continue
             par_y = parameters_values[parameters_keys[y]][0]
             dist = matrix_of_distance[x][y]
-            value = (par_x - par_y)/dist**3
+            value = (par_x - par_y)/(dist**3)
             chg += value
-            par_x += value/ kappa
         results[x] = chg
     return results
 
