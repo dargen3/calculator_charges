@@ -10,8 +10,9 @@ import importlib
 from scipy.optimize import minimize
 from numba import jit
 from scipy import stats
-from numpy import linalg, sqrt, array
+from numpy import linalg, sqrt, array, hstack, empty
 from numpy import array_split as npsplt
+from numpy import append as npappend
 from math import isnan
 from .calculation import writing_to_list, writing_to_file
 from .make_html import make_html
@@ -165,38 +166,56 @@ def rmsd_calculation(results, right_charges):
     return sqrt((1.0 / count) * suma)
 
 
+@jit(nopython=True, cache=True)
+def part_statistics(counts_atoms, results, molecules_s_numbers, number_of_atoms):
+    data = empty(number_of_atoms)
+    count = [0 for x in counts_atoms]
+    d = 0
+    for symbol in molecules_s_numbers:
+        data[counts_atoms[symbol]+count[symbol]] = results[d]
+        count[symbol] += 1
+        d = d + 1
+    return data
+
+@jit(nopython=True, cache=True)
+def fill_array(array, data, index):
+    count = 0
+    for x in data:
+        array[index + count] = x
+        count += 1
+    return count
 
 def calculating_charges(list_of_parameters, method, set_of_molecule):
     method.load_parameters_from_list(list_of_parameters)
     method.make_list_of_lists_of_parameters()
-    list_with_results = []
+    list_with_results = empty(method.dict_with_counts_by_atom_type["total"])
+    count = 0
     for molecule in set_of_molecule:
         try:
-            list_with_results.extend(method.calculate(molecule))
+            count += fill_array(list_with_results, method.calculate(molecule), count)
         except linalg.linalg.LinAlgError:
             pass
     try:
-        rmsd = rmsd_calculation(array(list_with_results),
-                                                     method.right_charges_for_parametrization[:len(list_with_results)])
+        rmsd = rmsd_calculation(list_with_results, method.right_charges_for_parametrization[:len(list_with_results)])
     except ZeroDivisionError:
         rmsd = 1000
-    atomic_types = sorted(method.atom_types_in_set)
-    dict_with_right_charges_by_atom_type = {}
-    for atom in atomic_types:
-        dict_with_right_charges_by_atom_type[str(atom)] = []
-    all_atomic_types = method.all_atomic_types
-    for x, result in enumerate(list_with_results):
-        dict_with_right_charges_by_atom_type[all_atomic_types[x]].append(result)
-    partial_rmsd = [0] * len(atomic_types)
+    data = part_statistics(method.counts_atoms_c, list_with_results, method.molecules_s_numbers, method.dict_with_counts_by_atom_type["total"])
+    partial_rmsd = [0] * len(method.counts_atoms_c)
     greater_rmsd = False
-    for atom in atomic_types:
+
+
+    for s in range(len(method.counts_atoms_c)):
         try:
-            partial_rmsd[atomic_types.index(atom)] = rmsd_calculation(
-                array(dict_with_right_charges_by_atom_type[atom]),
-                method.right_charges_for_parameterization_by_atom_types(atom)[
-                :len(dict_with_right_charges_by_atom_type[atom])])
+            data_part = data[method.counts_atoms_c[s]:method.counts_atoms_c[s+1]]
+        except IndexError:
+            data_part = data[method.counts_atoms_c[s]:]
+        try:
+            partial_rmsd[s] = rmsd_calculation(data_part, method.right_charges_for_parameterization_by_atom_types(method.parameters_keys[s])[:len(data_part)])
         except ZeroDivisionError:
             greater_rmsd = 1000.0
+
+
+
     if not greater_rmsd:
         greater_rmsd = max(partial_rmsd)
     if greater_rmsd and isnan(greater_rmsd) or isnan(rmsd):
@@ -283,7 +302,7 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
         molecule.set_length_correction(method.length_correction)
     method.make_list_of_lists_of_parameters()
     method.control_enough_atoms(set_of_molecule)
-    #method.num_of_atoms_in_set(set_of_molecule)
+    method.num_of_atoms_in_set(set_of_molecule)
     print("Parameterization running for {} molecules ...\n".format(choised_num_of_mol))
     if method_parameterization == "guided_minimization":
         samples = lhs(len(input_parameters_list), samples=len(input_parameters_list)*50, iterations=1000)

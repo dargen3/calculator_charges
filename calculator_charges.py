@@ -14,7 +14,7 @@ from modules.set_of_molecule import Set_of_molecule
 if __name__ == "__main__":
     args, logger = settings_argparse()
     warnings.filterwarnings("ignore")
-    random.seed(0)
+    # random.seed(0)
     if args.mode == "calculation":
         calculate_charges(args.parameters, args.sdf_input, args.chg_output, args.rewriting_with_force, args.method,
                           logger)
