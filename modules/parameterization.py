@@ -194,7 +194,7 @@ def calculating_charges(list_of_parameters, method, set_of_molecule):
         try:
             count += fill_array(list_with_results, method.calculate(molecule), count)
         except linalg.linalg.LinAlgError:
-            pass
+            print("lll")
         except ZeroDivisionError:
             return 1000
     try:
@@ -399,7 +399,7 @@ def parameterize(args_method, parameters, sdf_input, num_of_parameterized_mol, v
     print("\n\n\n\nTime of parameterization: {}".format(time_of_parameterization))
     print("\n\n\n")
     if args_make_html:
-        make_html(charges[:-4], sdf_input, method, table_for_all_atoms[0],
+        make_html(charges[:-4], sdf_input, args_method, table_for_all_atoms[0],
                   table_for_all_molecules[0], save_fig, atoms, statistics_data,
                   now.strftime("%Y-%m-%d %H:%M"), method_parameterization, choised_num_of_mol,
                   validation, time_of_parameterization)

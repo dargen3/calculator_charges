@@ -251,7 +251,7 @@ class EEM(Arciclass):
 def eem_calculate_cutoff(num_of_atoms, kappa, matrix_of_distance, parameters_values, parameters_keys, formal_charge):
     matrix = np.empty((num_of_atoms + 1, num_of_atoms + 1), dtype=np.float64)
     vector = np.empty(num_of_atoms + 1, dtype=np.float64)
-    cut_off = kappa / 5
+    cut_off = kappa / 12
     for x in range(num_of_atoms):
         for y in range(num_of_atoms):
             dist = matrix_of_distance[x][y]
@@ -334,7 +334,7 @@ def sfkeem_calculate_cut_off(num_of_atoms, sigma, parameters_values, parameters_
         vector[x] = - parameters_values[symbol][0]
     for x in range(num_of_atoms):
         for y in range(num_of_atoms):
-            value = 2.0 * np.sqrt(matrix[x, y]) * 1 / np.cosh(matrix_of_distance[x, y] * sigma) - 2.0 * np.sqrt(matrix[x, y]) * 1 / np.cosh(5 * sigma)
+            value = 2.0 * np.sqrt(matrix[x, y]) * 1 / np.cosh(matrix_of_distance[x, y] * sigma) - 2.0 * np.sqrt(matrix[x, y]) * 1 / np.cosh(12 * sigma)
             if value < 0:
                 matrix[x, y] = 0
             else:
@@ -432,7 +432,7 @@ def qeq_calculate_cut_off(num_of_atoms, matrix_of_distance, parameters_keys, par
             rad1 = vector_rad[i]
             rad2 = vector_rad[j]
             distance = matrix_of_distance[i][j]
-            value = correlation * erf(np.sqrt(rad1 * rad2 / (rad1 + rad2)) * distance) / distance - correlation * erf(np.sqrt(rad1 * rad2 / (rad1 + rad2)) * 5) / 5
+            value = correlation * erf(np.sqrt(rad1 * rad2 / (rad1 + rad2)) * distance) / distance - correlation * erf(np.sqrt(rad1 * rad2 / (rad1 + rad2)) * 12) / 12
             if value < 0:
                 matrix[i][j] = matrix[j][i] = 0
             else:
@@ -451,59 +451,34 @@ class QEqcutoff(Arciclass):
 
 
 
+@jit(nopython=True, cache=True)
+def gm_calculate(num_of_atoms, bonds, parameters_keys, parameters_values):
+    work_electronegativies = np.zeros(num_of_atoms, dtype=np.float64)
+    work_charges = np.zeros(num_of_atoms, dtype=np.float64)
+    for alpha in range(10):
+        for x in range(num_of_atoms):
+            a = parameters_values[parameters_keys[x]][0]
+            b = parameters_values[parameters_keys[x]][1]
+            c = parameters_values[parameters_keys[x]][2]
+            work_electronegativies[x] = a + b * work_charges[x] + c * work_charges[x] ** 2
+        for bond in bonds:
+            atom1 = bond[0] - 1
+            atom2 = bond[1] - 1
+            if work_electronegativies[atom1] < work_electronegativies[atom2]:
+                chi_plus = parameters_values[parameters_keys[atom1]][3]
+            else:
+                chi_plus = parameters_values[parameters_keys[atom2]][3]
+            charge_diff = (work_electronegativies[atom1] - work_electronegativies[atom2]) / chi_plus
+            work_charges[atom1] -= charge_diff * (1 / 2) ** alpha
+            work_charges[atom2] += charge_diff * (1 / 2) ** alpha
+    return work_charges
 
-
-
-
-
-
-#
-#
-# class EEE(Arciclass):
-#     def calculate(self, molecule):
-#         num_of_atoms = len(molecule)
-#         matrix = np.empty((num_of_atoms + 1, num_of_atoms), dtype=float)
-#         vector = np.empty(shape=[num_of_atoms + 1], dtype=float)
-#         matrix[num_of_atoms: ] = 1
-#         vector[-1] = molecule.formal_charge
-#         #matrix[:num_of_atoms, :num_of_atoms] = self.get_parameter("kappa") / molecule.matrix_of_distance
-#         for x in range(1, num_of_atoms + 1):
-#             chg = -1
-#             symbol_x = self.symbol(x, molecule)
-#             el = 0
-#             for y in range(1, num_of_atoms + 1):
-#                 if x != y:
-#                     distance = molecule.matrix_of_distance[x-1][y-1]
-#                     chg += 1/distance
-#                     symbol_y = self.symbol(y, molecule)
-#                     el += (self.get_parameter(symbol_x + "~el") - self.get_parameter(symbol_y + "~el"))/distance
-#                     matrix[x-1][y-1] = (self.get_parameter(symbol_x + "~tt") - self.get_parameter(symbol_y + "~tt"))/distance
-#             matrix[x-1][x-1] = chg
-#             vector[x-1] = -el
-#
-#         results = np.linalg.lstsq(matrix, vector)
-#
-#         return results[0]
-
-
-
-
-@jit(nopython=True)
-def eee(num_of_atoms, matrix_of_distance, parameters_keys, parameters_values, kappa):
-    results = np.empty(num_of_atoms)
-    for x in range(num_of_atoms):
-        chg = 0
-        par_x = parameters_values[parameters_keys[x]][0]
-        for y in range(num_of_atoms):
-            if y == x:
-                continue
-            par_y = parameters_values[parameters_keys[y]][0]
-            dist = matrix_of_distance[x][y]
-            value = (par_x - par_y)/(dist**3)
-            chg += value
-        results[x] = chg
-    return results
-
-class EEE(Arciclass):
+class GM(Arciclass):
     def calculate(self, molecule):
-        return eee(len(molecule), molecule.matrix_of_distance, molecule.s_numbers, self.list_of_lists_of_parameters, self.get_parameter("kappa"))
+        return gm_calculate(len(molecule), molecule._bonds, molecule.s_numbers,
+                             self.list_of_lists_of_parameters)
+
+
+
+
+

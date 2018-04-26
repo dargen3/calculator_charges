@@ -8,6 +8,9 @@ def make_html(name, sdf, method, all_atoms, all_molecules, fig_all, atomic_types
               num_of_par_mol, validation, time_of_parameterization):
     name = name + ".html"
     with open(name, "w") as html_file:
+        print("\n\ntest\n\n")
+        print(method, sdf, time)
+        print("\n\ntest\n\n")
         html_file.write("<h1>Method: {0}</h1>\n".format(method))
         html_file.write("<h1>Set of molecules: {0}</h1>\n".format(sdf))
         html_file.write("<h1>Date of parameterization: {0}</h1>\n".format(time))
@@ -181,14 +184,10 @@ def make_complete_html(verbose):
         html_file.write("</table>\n")
         html_file.write("<br /><br /><br /><br /><h3>Contact: dargen3@centrum.cz</h3>\n")
         print("Copying of data...\n\n\n")
-    system("ssh dargen3@lcc.ncbr.muni.cz \" cd www/ ; rm -r data/ \"")
-    system("ssh dargen3@lcc.ncbr.muni.cz \" cd www/ ; rm -r data_another/ \"")
     system("scp -r  data dargen3@lcc.ncbr.muni.cz:/home/dargen3/www/")
-    system("scp -r  data_another dargen3@lcc.ncbr.muni.cz:/home/dargen3/www/")
     if verbose:
         print(colored("\n\n\nData was copied sucessfully.\n\n\n", "green"))
         print("Setting permissions...")
-    #system("scp -r  data/index.html dargen3@lcc.ncbr.muni.cz:/home/dargen3/www/")
     system("ssh dargen3@lcc.ncbr.muni.cz \" mv www/data/index.html www/index.html ; chmod -R 705 * \"")
     if verbose:
         print(colored("Setting of permissions was sucessfull.\n\n\n", "green"))
