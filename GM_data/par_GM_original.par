@@ -1,0 +1,55 @@
+method: GM
+length_type: Angstrom
+<<global>>
+<<key>>
+atom
+high_bond
+<<value_symbol>>
+a
+b
+c
+chi
+<<value>>
+C   1   7.98       9.18       1.88      19.04 
+C   2   7.98       9.18       1.88      19.04
+H   1   7.17       6.24      -0.56      20.02
+N   1   11.54      10.82       1.36      23.72
+N   2   11.54      10.82       1.36      23.72 
+O   1   14.18      12.92       1.39      28.49
+O   2   14.18      12.92       1.39      28.49  
+S   1   10.14       9.13       1.38      20.65 
+S   2   10.14       9.13       1.38      20.65  
+<<end>>
+
+
+
+
+Parameterized set of molecules: data/GM/500/500.sdf
+Date of parameterization: 2018-04-20 11:44
+Method of parameterization: minimize
+Number of parameterized molecules: 500
+Mode: Full set parameterization
+
+Statistics for all atoms:
+     RMSD    max deviation    average deviation    pearson**2    num. of atoms
+---------  ---------------  -------------------  ------------  ---------------
+0.0532244         0.469496            0.0354495      0.980046            16168
+
+Statistics for molecules:
+     RMSD    max deviation    average deviation    pearson**2    num. of molecules
+---------  ---------------  -------------------  ------------  -------------------
+0.0520074         0.154579            0.0371608      0.980846                  500
+
+Statistics for atomic type:
+atomic type         RMSD    max deviation    average deviation    pearson**2    num. of atoms
+-------------  ---------  ---------------  -------------------  ------------  ---------------
+C~1            0.0517948         0.317628            0.038785       0.94939              2159
+C~2            0.0716309         0.427039            0.0493478      0.964908             4227
+H~1            0.030082          0.145811            0.0215687      0.868582             7456
+N~1            0.0717439         0.226731            0.0567891      0.756951              527
+N~2            0.0716681         0.469496            0.0479838      0.969251              389
+O~1            0.0717451         0.273649            0.0458447      0.787452              651
+O~2            0.0672166         0.169384            0.0552375      0.594425              627
+S~1            0.0717458         0.218505            0.0543749      0.591248               60
+S~2            0.0717138         0.279794            0.050928       0.994551               72
+

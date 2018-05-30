@@ -79,6 +79,7 @@ if __name__ == "__main__":
                             atom.atoms_data[key][0] += (electronegativity[a.symbol] - electronegativity[atom.symbol])/molecule.matrix_of_distance[index][i]
                             atom.atoms_data[key][1] += 1
                             atom.atoms_data[key][2] += (a.charge - atom.charge)/molecule.matrix_of_distance[index][i]
+
         print("type,charge,highest_bond,el2,chg2,el3,chg3,el4,chg4,el5,chg5,el6,chg6,el7,chg7,el8,chg8,el9,chg9,el10,chg10,el11,chg11,el12,chg12")
         for molecule in set_of_molecules:
             for a in molecule._atoms:

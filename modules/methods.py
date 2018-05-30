@@ -455,7 +455,7 @@ class QEqcutoff(Arciclass):
 def gm_calculate(num_of_atoms, bonds, parameters_keys, parameters_values):
     work_electronegativies = np.zeros(num_of_atoms, dtype=np.float64)
     work_charges = np.zeros(num_of_atoms, dtype=np.float64)
-    for alpha in range(10):
+    for alpha in range(4):
         for x in range(num_of_atoms):
             a = parameters_values[parameters_keys[x]][0]
             b = parameters_values[parameters_keys[x]][1]
